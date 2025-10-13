@@ -5,6 +5,9 @@
 #if !defined(BIZWEN_DEQUE_HPP)
 #define BIZWEN_DEQUE_HPP
 
+#if !defined(BIZWEN_MODULE)
+#define BIZWEN_EXPORT
+
 // assert
 #include <cassert>
 // ptrdiff_t/size_t
@@ -40,6 +43,12 @@
 #include <exception>
 #endif
 
+#else
+
+#define BIZWEN_EXPORT export
+
+#endif
+
 // 代码规范：
 // 使用等号初始化
 // 内部函数可以使用auto返回值
@@ -50,11 +59,98 @@
 
 namespace bizwen
 {
-template <typename T, typename Alloc>
+BIZWEN_EXPORT template <typename T, typename Alloc>
 class deque;
 
 namespace deque_detail
 {
+template <typename U, typename Alloc>
+class throw_guard
+{
+    U first_;
+    U &current_;
+    Alloc &a_;
+    bool flag = true;
+
+  public:
+    throw_guard(U &result, Alloc &al) noexcept : first_(result), current_(result), a_(al)
+    {
+    }
+
+    ~throw_guard()
+    {
+        if (flag)
+        {
+            for (; first_ != current_; (void)++first_)
+            {
+                ::std::allocator_traits<Alloc>::destroy(a_, std::addressof(*first_));
+            }
+        }
+    }
+
+    void release() noexcept
+    {
+        flag = false;
+    }
+};
+
+template <typename U, typename V, typename W, typename X, typename Alloc>
+void uninitialized_copy(Alloc &a, U first, V last, W first2, X last2)
+{
+    throw_guard guard{first2, a};
+
+    for (; first != last && first2 != last2; (void)++first, (void)++first2)
+    {
+        ::std::allocator_traits<Alloc>::construct(a, std::addressof(*first2), *first);
+    }
+
+    guard.release();
+}
+
+template <typename U, typename V, typename T, typename Alloc>
+void uninitialized_fill(Alloc &a, U first, V last, const T &value)
+{
+    throw_guard guard{first, a};
+
+    for (; first != last; (void)++first)
+    {
+        ::std::allocator_traits<Alloc>::construct(a, std::addressof(*first), value);
+    }
+
+    guard.release();
+}
+
+template <typename U, typename V, typename W, typename X, typename Alloc>
+void uninitialized_move(Alloc &a, U first, V last, W first2, X last2)
+{
+    throw_guard guard{first2, a};
+
+    for (; first != last && first2 != last2; (void)++first, (void)++first2)
+    {
+        ::std::allocator_traits<Alloc>::construct(a, ::std::addressof(*first2), ::std::move(*first));
+    }
+
+    guard.release();
+}
+
+template <typename U, typename V, typename Alloc>
+void uninitialized_value_construct(Alloc &a, U first, V last)
+{
+    throw_guard guard{first, a};
+
+    for (; first != last; (void)++first)
+    {
+        ::std::allocator_traits<Alloc>::construct(a, ::std::addressof(*first));
+    }
+
+    guard.release();
+}
+
+template <typename A>
+concept mini_alloc = requires(A &a) {
+    typename A::value_type;
+    a.allocate(::std::size_t(0));
+};
 
 // 用于从参数包中获得前两个对象（只有两个）的引用的辅助函数
 template <typename U, typename V>
@@ -139,17 +235,17 @@ inline constexpr auto calc_pos(::std::size_t const front_size, ::std::size_t con
     return pos_t{new_pos / block_elems, new_pos % block_elems};
 }
 
-template <typename T, typename Block>
+template <typename T, typename Block, typename DiffType>
 class buckets_type;
 
-template <typename T, typename Block>
+template <typename T, typename Block, typename DiffType>
 class bucket_iterator
 {
     using RConstT = ::std::remove_const_t<T>;
 
-    friend buckets_type<RConstT, Block>;
-    friend buckets_type<T, Block>;
-    friend bucket_iterator<T const, Block>;
+    friend buckets_type<RConstT, Block, DiffType>;
+    friend buckets_type<T, Block, DiffType>;
+    friend bucket_iterator<T const, Block, DiffType>;
 
     Block *block_elem_begin_{};
     Block *block_elem_end_{};
@@ -171,7 +267,7 @@ class bucket_iterator
     {
     }
 
-    constexpr bucket_iterator<RConstT, Block> remove_const_() const
+    constexpr bucket_iterator<RConstT, Block, DiffType> remove_const_() const
         requires(::std::is_const_v<T>)
     {
         return {block_elem_begin_, block_elem_end_, block_elem_curr_, elem_begin_begin_, elem_begin_end_,
@@ -201,7 +297,7 @@ class bucket_iterator
     }
 
   public:
-    using difference_type = ::std::ptrdiff_t;
+    using difference_type = DiffType;
     using value_type = ::std::span<T>;
     using pointer = value_type *;
     using reference = value_type &;
@@ -281,12 +377,12 @@ class bucket_iterator
         return block_elem_curr_ <=> other.block_elem_curr_;
     }
 
-    constexpr ::std::ptrdiff_t operator-(bucket_iterator const &other) const noexcept
+    constexpr difference_type operator-(bucket_iterator const &other) const noexcept
     {
         return block_elem_curr_ - other.block_elem_curr_;
     }
 
-    constexpr ::std::span<T> operator[](::std::ptrdiff_t const pos)
+    constexpr ::std::span<T> operator[](difference_type const pos)
     {
 #if defined(__cpp_auto_cast)
         return *(auto{*this} += pos);
@@ -297,7 +393,7 @@ class bucket_iterator
 #endif
     }
 
-    constexpr ::std::span<T> operator[](::std::ptrdiff_t const pos) const noexcept
+    constexpr ::std::span<T> operator[](difference_type const pos) const noexcept
     {
 #if defined(__cpp_auto_cast)
         return *(auto{*this} += pos);
@@ -318,17 +414,17 @@ class bucket_iterator
         return {elem_curr_begin_, elem_curr_end_};
     }
 
-    constexpr bucket_iterator &operator+=(::std::ptrdiff_t const pos) noexcept
+    constexpr bucket_iterator &operator+=(difference_type const pos) noexcept
     {
         return plus_and_assign_(pos);
     }
 
-    constexpr bucket_iterator &operator-=(::std::ptrdiff_t const pos) noexcept
+    constexpr bucket_iterator &operator-=(difference_type const pos) noexcept
     {
         return plus_and_assign_(-pos);
     }
 
-    friend constexpr bucket_iterator operator+(bucket_iterator const &it, ::std::ptrdiff_t const pos) noexcept
+    friend constexpr bucket_iterator operator+(bucket_iterator const &it, difference_type const pos) noexcept
     {
 #if defined(__cpp_auto_cast)
         return auto{it}.plus_and_assign_(pos);
@@ -339,22 +435,22 @@ class bucket_iterator
 #endif
     }
 
-    friend constexpr bucket_iterator operator+(::std::ptrdiff_t const pos, bucket_iterator const &it) noexcept
+    friend constexpr bucket_iterator operator+(difference_type const pos, bucket_iterator const &it) noexcept
     {
         return it + pos;
     }
 
-    friend constexpr bucket_iterator operator-(::std::ptrdiff_t const pos, bucket_iterator const &it) noexcept
+    friend constexpr bucket_iterator operator-(difference_type const pos, bucket_iterator const &it) noexcept
     {
         return it + (-pos);
     }
 
-    friend constexpr bucket_iterator operator-(bucket_iterator const &it, ::std::ptrdiff_t pos) noexcept
+    friend constexpr bucket_iterator operator-(bucket_iterator const &it, difference_type pos) noexcept
     {
         return it + (-pos);
     }
 
-    constexpr operator bucket_iterator<T const, Block>() const
+    constexpr operator bucket_iterator<T const, Block, DiffType>() const
         requires(!::std::is_const_v<T>)
     {
         return {block_elem_begin_, block_elem_end_, block_elem_curr_, elem_begin_begin_, elem_begin_end_,
@@ -363,23 +459,23 @@ class bucket_iterator
 };
 
 #if !defined(NDEBUG)
-static_assert(::std::random_access_iterator<bucket_iterator<int, int *>>);
-static_assert(::std::random_access_iterator<bucket_iterator<const int, int *>>);
+static_assert(::std::random_access_iterator<bucket_iterator<int, int *, ::std::ptrdiff_t>>);
+static_assert(::std::random_access_iterator<bucket_iterator<const int, int *, ::std::ptrdiff_t>>);
 #endif
 
-template <typename T, typename Block>
+template <typename T, typename Block, typename DiffType>
 class deque_iterator;
 
-template <typename T, typename Block>
-class buckets_type : public ::std::ranges::view_interface<buckets_type<T, Block>>
+template <typename T, typename Block, typename  DiffType>
+class buckets_type : public ::std::ranges::view_interface<buckets_type<T, Block, DiffType>>
 {
     using RConstT = ::std::remove_const_t<T>;
 
     template <typename U, typename Alloc>
     friend class bizwen::deque;
-    friend buckets_type<::std::remove_const_t<T>, Block>;
-    friend deque_iterator<RConstT const, Block>;
-    friend deque_iterator<RConstT, Block>;
+    friend buckets_type<::std::remove_const_t<T>, Block, DiffType>;
+    friend deque_iterator<RConstT const, Block, DiffType>;
+    friend deque_iterator<RConstT, Block, DiffType>;
 
     Block *block_elem_begin_{};
     Block *block_elem_end_{};
@@ -421,10 +517,10 @@ class buckets_type : public ::std::ranges::view_interface<buckets_type<T, Block>
     using reference = value_type &;
     using const_pointer = value_type const *;
     using const_reference = value_type const &;
-    using size_type = ::std::size_t;
-    using difference_type = ::std::ptrdiff_t;
-    using iterator = bucket_iterator<T, Block>;
-    using const_iterator = bucket_iterator<T const, Block>;
+    using size_type = ::std::make_unsigned_t<DiffType>;
+    using difference_type = DiffType;
+    using iterator = bucket_iterator<T, Block, DiffType>;
+    using const_iterator = bucket_iterator<T const, Block, DiffType>;
     using reverse_iterator = ::std::reverse_iterator<iterator>;
     using const_reverse_iterator = ::std::reverse_iterator<const_iterator>;
 
@@ -436,7 +532,7 @@ class buckets_type : public ::std::ranges::view_interface<buckets_type<T, Block>
 
     constexpr buckets_type &operator=(buckets_type const &) = default;
 
-    constexpr ::std::size_t size() const noexcept
+    constexpr size_type size() const noexcept
     {
         return block_elem_end_ - block_elem_begin_;
     }
@@ -469,12 +565,12 @@ class buckets_type : public ::std::ranges::view_interface<buckets_type<T, Block>
         return {elem_end_begin_, elem_end_end_};
     }
 
-    constexpr ::std::span<T> at(::std::size_t const pos) noexcept
+    constexpr ::std::span<T> at(size_type const pos) noexcept
     {
         return at_impl(pos);
     }
 
-    constexpr ::std::span<const T> at(::std::size_t const pos) const noexcept
+    constexpr ::std::span<const T> at(size_type const pos) const noexcept
         requires(!::std::is_const_v<T>)
     {
         auto const s = at_impl(pos);
@@ -552,29 +648,29 @@ class buckets_type : public ::std::ranges::view_interface<buckets_type<T, Block>
         return const_reverse_iterator{begin()};
     }
 
-    constexpr operator buckets_type<T const, Block>() const
+    constexpr operator buckets_type<T const, Block, DiffType>() const
         requires(!::std::is_const_v<T>)
     {
         return {block_elem_begin_, block_elem_end_, elem_begin_begin_, elem_begin_end_, elem_end_begin_, elem_end_end_};
     }
 };
 
-template <typename T, typename Block>
+template <typename T, typename Block, typename DiffType>
 class deque_iterator
 {
     using RConstT = ::std::remove_const_t<T>;
 
     template <typename U, typename Alloc>
     friend class bizwen::deque;
-    friend deque_iterator<RConstT, Block>;
-    friend deque_iterator<T const, Block>;
+    friend deque_iterator<RConstT, Block, DiffType>;
+    friend deque_iterator<T const, Block, DiffType>;
 
     Block *block_elem_curr_{};
     Block *block_elem_end_{};
     RConstT *elem_begin_{};
     RConstT *elem_curr_{};
 #if !defined(NDEBUG)
-    buckets_type<T const, Block> buckets_{};
+    buckets_type<T const, Block, DiffType> buckets_{};
 
     constexpr bool verify() const noexcept
     {
@@ -589,14 +685,14 @@ class deque_iterator
         assert(elem_curr_ <= elem_begin_ + block_elements_v<T>);
         if (block_elem_curr_ == buckets_.block_elem_end_ - ::std::size_t(1))
             assert(elem_curr_ <= buckets_.elem_end_end_);
-        else if (block_elem_curr_ == buckets_.block_elem_begin_)
+        if (block_elem_curr_ == buckets_.block_elem_begin_)
             assert(elem_curr_ >= buckets_.elem_begin_begin_);
 
         return true;
     }
 
     constexpr deque_iterator(Block *block_curr, Block *block_end, RConstT *const begin, RConstT *const pos,
-                             buckets_type<T const, Block> buckets) noexcept
+                             buckets_type<T const, Block, DiffType> buckets) noexcept
         : block_elem_curr_(block_curr), block_elem_end_(block_end), elem_begin_(deque_detail::to_address(begin)),
           elem_curr_(deque_detail::to_address(pos)), buckets_(buckets)
     {
@@ -609,7 +705,7 @@ class deque_iterator
     }
 #endif
 
-    constexpr deque_iterator<RConstT, Block> remove_const_() const noexcept
+    constexpr deque_iterator<RConstT, Block, DiffType> remove_const_() const noexcept
         requires(::std::is_const_v<T>)
     {
 #if !defined(NDEBUG)
@@ -655,7 +751,7 @@ class deque_iterator
     }
 
   public:
-    using difference_type = ::std::ptrdiff_t;
+    using difference_type = DiffType;
     using value_type = T;
     using pointer = T *;
     using reference = T &;
@@ -755,30 +851,30 @@ class deque_iterator
 #endif
     }
 
-    constexpr T &operator[](::std::ptrdiff_t const pos) noexcept
+    constexpr T &operator[](difference_type const pos) noexcept
     {
         return at_impl_(pos);
     }
 
-    constexpr T &operator[](::std::ptrdiff_t const pos) const noexcept
+    constexpr T &operator[](difference_type const pos) const noexcept
     {
         return at_impl_(pos);
     }
 
-    friend constexpr ::std::ptrdiff_t operator-(deque_iterator const &lhs, deque_iterator const &rhs) noexcept
+    friend constexpr difference_type operator-(deque_iterator const &lhs, deque_iterator const &rhs) noexcept
     {
         assert(lhs.block_elem_end_ == rhs.block_elem_end_);
         auto const block_size = lhs.block_elem_curr_ - rhs.block_elem_curr_;
-        return block_size * static_cast<::std::ptrdiff_t>(block_elements_v<T>) + lhs.elem_curr_ - lhs.elem_begin_ -
-               (rhs.elem_curr_ - rhs.elem_begin_);
+        return static_cast<difference_type>(block_size * static_cast<difference_type>(block_elements_v<T>) + lhs.elem_curr_ - lhs.elem_begin_ -
+               (rhs.elem_curr_ - rhs.elem_begin_));
     }
 
-    constexpr deque_iterator &operator+=(::std::ptrdiff_t const pos) noexcept
+    constexpr deque_iterator &operator+=(difference_type const pos) noexcept
     {
         return plus_and_assign_(pos);
     }
 
-    friend constexpr deque_iterator operator+(deque_iterator const &it, ::std::ptrdiff_t const pos) noexcept
+    friend constexpr deque_iterator operator+(deque_iterator const &it, difference_type const pos) noexcept
     {
 #if defined(__cpp_auto_cast)
         return auto{it}.plus_and_assign_(pos);
@@ -789,27 +885,27 @@ class deque_iterator
 #endif
     }
 
-    friend constexpr deque_iterator operator+(::std::ptrdiff_t const pos, deque_iterator const &it) noexcept
+    friend constexpr deque_iterator operator+(difference_type const pos, deque_iterator const &it) noexcept
     {
         return it + pos;
     }
 
-    constexpr deque_iterator &operator-=(::std::ptrdiff_t const pos) noexcept
+    constexpr deque_iterator &operator-=(difference_type const pos) noexcept
     {
         return plus_and_assign_(-pos);
     }
 
-    friend constexpr deque_iterator operator-(deque_iterator const &it, ::std::ptrdiff_t const pos) noexcept
+    friend constexpr deque_iterator operator-(deque_iterator const &it, difference_type const pos) noexcept
     {
         return it + (-pos);
     }
 
-    friend constexpr deque_iterator operator-(::std::ptrdiff_t const pos, deque_iterator const &it) noexcept
+    friend constexpr deque_iterator operator-(difference_type const pos, deque_iterator const &it) noexcept
     {
         return it + (-pos);
     }
 
-    constexpr operator deque_iterator<T const, Block>() const
+    constexpr operator deque_iterator<T const, Block, DiffType>() const
         requires(!::std::is_const_v<T>)
     {
 #if !defined(NDEBUG)
@@ -1067,7 +1163,8 @@ class deque
                  ::std::ranges::subrange{block_elem_begin_ + ::std::size_t(1), block_elem_end_ - ::std::size_t(1)})
             {
                 for (auto const &i :
-                     ::std::ranges::subrange{block_begin, block_begin + deque_detail::block_elements_v<T>})
+                     ::std::ranges::subrange{::std::to_address(block_begin),
+                                             ::std::to_address(block_begin) + deque_detail::block_elements_v<T>})
                 {
                     atraits_t_::destroy(allocator_, ::std::addressof(i));
                 }
@@ -1148,14 +1245,14 @@ class deque
     using reference = value_type &;
     using const_pointer = atraits_t_::const_pointer;
     using const_reference = value_type const &;
-    using size_type = ::std::size_t;
-    using difference_type = ::std::ptrdiff_t;
-    using iterator = deque_detail::deque_iterator<T, Block>;
-    using reverse_iterator = ::std::reverse_iterator<deque_detail::deque_iterator<T, Block>>;
-    using const_iterator = deque_detail::deque_iterator<T const, Block>;
-    using const_reverse_iterator = ::std::reverse_iterator<deque_detail::deque_iterator<T const, Block>>;
-    using buckets_type = deque_detail::buckets_type<T, Block>;
-    using const_buckets_type = deque_detail::buckets_type<T const, Block>;
+    using size_type = atraits_t_::size_type;
+    using difference_type = atraits_t_::difference_type;
+    using iterator = deque_detail::deque_iterator<T, Block,difference_type>;
+    using reverse_iterator = ::std::reverse_iterator<deque_detail::deque_iterator<T, Block,difference_type>>;
+    using const_iterator = deque_detail::deque_iterator<T const, Block,difference_type>;
+    using const_reverse_iterator = ::std::reverse_iterator<deque_detail::deque_iterator<T const, Block,difference_type>>;
+    using buckets_type = deque_detail::buckets_type<T, Block,difference_type>;
+    using const_buckets_type = deque_detail::buckets_type<T const, Block,difference_type>;
     using allocator_type = Alloc;
 
     constexpr Alloc get_allocator() const noexcept
@@ -1212,7 +1309,7 @@ class deque
     }
 
     // 空deque安全
-    constexpr ::std::size_t size() const noexcept
+    constexpr size_type size() const noexcept
     {
         auto const block_size = block_elem_size_();
         auto result = ::std::size_t(0);
@@ -1228,12 +1325,13 @@ class deque
         {
             result += elem_end_end_ - elem_end_begin_;
         }
-        return result;
+        return static_cast<size_type>(result);
     }
 
-    constexpr ::std::size_t max_size() const noexcept
+    constexpr size_type max_size() const noexcept
     {
-        return ::std::ranges::min(atraits_t_::max_size(allocator_), ::std::size_t(-1) / ::std::size_t(2) / sizeof(T));
+        return static_cast<size_type>(
+            (::std::ranges::min)(atraits_t_::max_size(allocator_), ::std::size_t(-1) / ::std::size_t(2) / sizeof(T)));
     }
 
 #if !defined(NDEBUG)
@@ -1692,13 +1790,13 @@ class deque
             auto const begin = last - elem_size;
             if constexpr (move)
             {
-                ::std::ranges::uninitialized_move(other.elem_begin_begin_, other.elem_begin_end_, begin,
-                                                  ::std::unreachable_sentinel);
+                deque_detail::uninitialized_move(allocator_, other.elem_begin_begin_, other.elem_begin_end_, begin,
+                                                 ::std::unreachable_sentinel);
             }
             else
             {
-                ::std::ranges::uninitialized_copy(other.elem_begin_begin_, other.elem_begin_end_, begin,
-                                                  ::std::unreachable_sentinel);
+                deque_detail::uninitialized_copy(allocator_, other.elem_begin_begin_, other.elem_begin_end_, begin,
+                                                 ::std::unreachable_sentinel);
             }
             elem_begin_(begin, last, first);
             elem_end_(begin, last, last);
@@ -1713,13 +1811,15 @@ class deque
                 auto const src_begin = block_begin;
                 if constexpr (move)
                 {
-                    ::std::ranges::uninitialized_move(src_begin, src_begin + deque_detail::block_elements_v<T>, begin,
-                                                      ::std::unreachable_sentinel);
+                    deque_detail::uninitialized_move(allocator_, src_begin,
+                                                     src_begin + deque_detail::block_elements_v<T>, begin,
+                                                     ::std::unreachable_sentinel);
                 }
                 else
                 {
-                    ::std::ranges::uninitialized_copy(src_begin, src_begin + deque_detail::block_elements_v<T>, begin,
-                                                      ::std::unreachable_sentinel);
+                    deque_detail::uninitialized_copy(allocator_, src_begin,
+                                                     src_begin + deque_detail::block_elements_v<T>, begin,
+                                                     ::std::unreachable_sentinel);
                 }
                 elem_end_(begin, begin + deque_detail::block_elements_v<T>, elem_end_last_);
                 ++block_elem_end_;
@@ -1731,23 +1831,18 @@ class deque
             auto const begin = *block_elem_end_;
             if constexpr (move)
             {
-                ::std::ranges::uninitialized_move(other.elem_end_begin_, other.elem_end_end_, begin,
-                                                  ::std::unreachable_sentinel);
+                deque_detail::uninitialized_move(allocator_, other.elem_end_begin_, other.elem_end_end_, begin,
+                                                 ::std::unreachable_sentinel);
             }
             else
             {
-                ::std::ranges::uninitialized_copy(other.elem_end_begin_, other.elem_end_end_, begin,
-                                                  ::std::unreachable_sentinel);
+                deque_detail::uninitialized_copy(allocator_, other.elem_end_begin_, other.elem_end_end_, begin,
+                                                 ::std::unreachable_sentinel);
             }
             elem_end_(begin, begin + (other.elem_end_end_ - other.elem_end_begin_),
                       begin + deque_detail::block_elements_v<T>);
             ++block_elem_end_;
         }
-    }
-
-    static consteval void is_iterator_(iterator const &) noexcept
-    {
-        /* */
     }
 
   public:
@@ -1770,48 +1865,25 @@ class deque
         // 由于析构优先考虑elem_begin，因此必须独立构造elem_begin
         if (full_blocks)
         {
-            auto const begin = *block_elem_end_;
+            auto const begin = ::std::to_address(*block_elem_end_);
             auto const end = begin + deque_detail::block_elements_v<T>;
             if constexpr (sizeof...(Ts) == ::std::size_t(0))
             {
-                if constexpr (is_default_operation_)
-                {
-                    ::std::ranges::uninitialized_value_construct(begin, end);
-                    elem_begin_(begin, end, begin);
-                }
-                else
-                {
-                    elem_begin_(begin, begin, begin);
-                    for (auto &i : ::std::ranges::subrange(begin, end))
-                    {
-                        atraits_t_::construct(allocator_, &i);
-                        ++elem_begin_end_;
-                    }
-                }
+                deque_detail::uninitialized_value_construct(allocator_, begin, end);
+                elem_begin_(begin, end, begin);
             }
             else if constexpr (sizeof...(Ts) == ::std::size_t(1))
             {
-                if constexpr (is_default_operation_)
-                {
-                    ::std::ranges::uninitialized_fill(begin, end, ts...);
-                    elem_begin_(begin, end, begin);
-                }
-                else
-                {
-                    elem_begin_(begin, begin, begin);
-                    for (auto &i : ::std::ranges::subrange(begin, end))
-                    {
-                        atraits_t_::construct(allocator_, &i, ts...);
-                        ++elem_begin_end_;
-                    }
-                }
+                deque_detail::uninitialized_fill(allocator_, begin, end, ts...);
+                elem_begin_(begin, end, begin);
             }
             else if constexpr (sizeof...(Ts) == ::std::size_t(2))
             {
                 auto pair = deque_detail::get_iter_pair(ts...);
-                ::std::ranges::uninitialized_copy(pair.src_begin, ::std::unreachable_sentinel, begin,
-                                                  begin + deque_detail::block_elements_v<T>);
-                pair.src_begin += deque_detail::block_elements_v<T>;
+                deque_detail::uninitialized_copy(allocator_, pair.src_begin, ::std::unreachable_sentinel, begin,
+                                                 begin + deque_detail::block_elements_v<T>);
+                pair.src_begin +=
+                    static_cast<::std::iter_difference_t<decltype(pair.src_begin)>>(deque_detail::block_elements_v<T>);
                 elem_begin_(begin, end, begin);
             }
             else
@@ -1825,48 +1897,25 @@ class deque
         {
             for (auto i = ::std::size_t(0); i != full_blocks - ::std::size_t(1); ++i)
             {
-                auto const begin = *block_elem_end_;
+                auto const begin = ::std::to_address(*block_elem_end_);
                 auto const end = begin + deque_detail::block_elements_v<T>;
                 if constexpr (sizeof...(Ts) == ::std::size_t(0))
                 {
-                    if constexpr (is_default_operation_)
-                    {
-                        ::std::ranges::uninitialized_value_construct(begin, end);
-                        elem_end_(begin, end, elem_end_last_);
-                    }
-                    else
-                    {
-                        elem_end_(begin, begin, elem_end_last_);
-                        for (auto &j : ::std::ranges::subrange(begin, end))
-                        {
-                            atraits_t_::construct(allocator_, &j);
-                            ++elem_end_end_;
-                        }
-                    }
+                    deque_detail::uninitialized_value_construct(allocator_, begin, end);
+                    elem_end_(begin, end, elem_end_last_);
                 }
                 else if constexpr (sizeof...(Ts) == ::std::size_t(1))
                 {
-                    if constexpr (is_default_operation_)
-                    {
-                        ::std::ranges::uninitialized_fill(begin, end, ts...);
-                        elem_end_(begin, end, elem_end_last_);
-                    }
-                    else
-                    {
-                        elem_end_(begin, begin, elem_end_last_);
-                        for (auto &j : ::std::ranges::subrange(begin, end))
-                        {
-                            atraits_t_::construct(allocator_, &j, ts...);
-                            ++elem_end_end_;
-                        }
-                    }
+                    deque_detail::uninitialized_fill(allocator_, begin, end, ts...);
+                    elem_end_(begin, end, elem_end_last_);
                 }
                 else if constexpr (sizeof...(Ts) == ::std::size_t(2))
                 {
                     auto pair = deque_detail::get_iter_pair(ts...);
-                    ::std::ranges::uninitialized_copy(pair.src_begin, ::std::unreachable_sentinel, begin,
-                                                      begin + deque_detail::block_elements_v<T>);
-                    pair.src_begin += deque_detail::block_elements_v<T>;
+                    deque_detail::uninitialized_copy(allocator_, pair.src_begin, ::std::unreachable_sentinel, begin,
+                                                     begin + deque_detail::block_elements_v<T>);
+                    pair.src_begin += static_cast<::std::iter_difference_t<decltype(pair.src_begin)>>(
+                        deque_detail::block_elements_v<T>);
                     elem_end_(begin, end, elem_end_last_);
                 }
                 else
@@ -1879,46 +1928,23 @@ class deque
         }
         if (rem_elems)
         {
-            auto const begin = *block_elem_end_;
+            auto const begin = ::std::to_address(*block_elem_end_);
             auto const end = begin + rem_elems;
             if constexpr (sizeof...(Ts) == ::std::size_t(0))
             {
-                if constexpr (is_default_operation_)
-                {
-                    ::std::ranges::uninitialized_value_construct(begin, end);
-                    elem_end_(begin, end, begin + deque_detail::block_elements_v<T>);
-                }
-                else
-                {
-                    elem_end_(begin, begin, begin + deque_detail::block_elements_v<T>);
-                    for (auto &i : ::std::ranges::subrange(begin, end))
-                    {
-                        atraits_t_::construct(allocator_, &i);
-                        ++elem_end_end_;
-                    }
-                }
+                deque_detail::uninitialized_value_construct(allocator_, begin, end);
+                elem_end_(begin, end, begin + deque_detail::block_elements_v<T>);
             }
             else if constexpr (sizeof...(Ts) == ::std::size_t(1))
             {
-                if constexpr (is_default_operation_)
-                {
-                    ::std::ranges::uninitialized_fill(begin, end, ts...);
-                    elem_end_(begin, end, begin + deque_detail::block_elements_v<T>);
-                }
-                else
-                {
-                    elem_end_(begin, begin, begin + deque_detail::block_elements_v<T>);
-                    for (auto &i : ::std::ranges::subrange(begin, end))
-                    {
-                        atraits_t_::construct(allocator_, &i, ts...);
-                        ++elem_end_end_;
-                    }
-                }
+                deque_detail::uninitialized_fill(allocator_, begin, end, ts...);
+                elem_end_(begin, end, begin + deque_detail::block_elements_v<T>);
             }
             else if constexpr (sizeof...(Ts) == ::std::size_t(2))
             {
                 auto pair = deque_detail::get_iter_pair(ts...);
-                ::std::ranges::uninitialized_copy(pair.src_begin, pair.src_end, begin, ::std::unreachable_sentinel);
+                deque_detail::uninitialized_copy(allocator_, pair.src_begin, pair.src_end, begin,
+                                                 ::std::unreachable_sentinel);
                 elem_end_(begin, end, begin + deque_detail::block_elements_v<T>);
             }
             else
@@ -1980,38 +2006,23 @@ class deque
         }
     }
 
-    explicit constexpr deque(::std::size_t const count)
+    explicit deque(size_type const count, Alloc const &alloc = Alloc()) : allocator_(alloc)
     {
-        auto const res = deque_detail::calc_cap<T>(count);
+        assert(allocator_ == alloc);
+        auto const res = deque_detail::calc_cap<T>(static_cast<::std::size_t>(count));
         construct_guard_ guard(this);
         extent_block_(res.block_size);
         construct_(res.full_blocks, res.rem_elems);
         guard.release();
     }
 
-    explicit deque(size_type count, Alloc const &alloc) : allocator_(alloc)
+    // TRANSITION: https://github.com/microsoft/STL/pull/4254
+    // TRANSITION: CWG2369, MSVC
+    template <typename = ::std::enable_if_t<deque_detail::mini_alloc<Alloc>>>
+    constexpr deque(size_type const count, T const &value, Alloc const &alloc = Alloc()) : allocator_(alloc)
     {
         assert(allocator_ == alloc);
-        auto const res = deque_detail::calc_cap<T>(count);
-        construct_guard_ guard(this);
-        extent_block_(res.block_size);
-        construct_(res.full_blocks, res.rem_elems);
-        guard.release();
-    }
-
-    constexpr deque(::std::size_t const count, T const &t)
-    {
-        auto const res = deque_detail::calc_cap<T>(count);
-        construct_guard_ guard(this);
-        extent_block_(res.block_size);
-        construct_(res.full_blocks, res.rem_elems, t);
-        guard.release();
-    }
-
-    constexpr deque(size_type count, T const &value, Alloc const &alloc) : allocator_(alloc)
-    {
-        assert(allocator_ == alloc);
-        auto const res = deque_detail::calc_cap<T>(count);
+        auto const res = deque_detail::calc_cap<T>(static_cast<::std::size_t>(count));
         construct_guard_ guard(this);
         extent_block_(res.block_size);
         construct_(res.full_blocks, res.rem_elems, value);
@@ -2072,40 +2083,12 @@ class deque
     template <typename R>
     constexpr void from_range_noguard_(R &&rg)
     {
-        if constexpr (requires { is_iterator_(::std::ranges::begin(rg)); })
-        {
-            from_range_noguard_(::std::ranges::begin(rg), ::std::ranges::end(rg));
-        }
-        else if constexpr (::std::ranges::sized_range<R>)
-        {
-            if (auto const size = ::std::ranges::size(rg))
-            {
-                auto const res = deque_detail::calc_cap<T>(size);
-                extent_block_(res.block_size);
-                construct_(res.full_blocks, res.rem_elems, ::std::ranges::begin(rg), ::std::ranges::end(rg));
-            }
-        }
-        else if constexpr (::std::random_access_iterator<decltype(::std::ranges::begin(rg))>)
-        {
-            from_range_noguard_(::std::ranges::begin(rg), ::std::ranges::end(rg));
-        }
-        else
-        {
-            from_range_noguard_(::std::ranges::begin(rg), ::std::ranges::end(rg));
-        }
+        from_range_noguard_(::std::ranges::begin(rg), ::std::ranges::end(rg));
     }
 
   public:
     template <::std::input_iterator U, typename V>
-    constexpr deque(U first, V last)
-    {
-        construct_guard_ guard(this);
-        from_range_noguard_(::std::move(first), ::std::move(last));
-        guard.release();
-    }
-
-    template <::std::input_iterator U, typename V>
-    constexpr deque(U first, V last, Alloc const &alloc) : allocator_(alloc)
+    constexpr deque(U first, V last, Alloc const &alloc = Alloc()) : allocator_(alloc)
     {
         assert(allocator_ == alloc);
         construct_guard_ guard(this);
@@ -2116,16 +2099,7 @@ class deque
 #if defined(__cpp_lib_containers_ranges)
     template <::std::ranges::input_range R>
         requires ::std::convertible_to<::std::ranges::range_value_t<R>, T>
-    constexpr deque(::std::from_range_t, R &&rg)
-    {
-        construct_guard_ guard(this);
-        from_range_noguard_(rg);
-        guard.release();
-    }
-
-    template <::std::ranges::input_range R>
-        requires ::std::convertible_to<::std::ranges::range_value_t<R>, T>
-    constexpr deque(::std::from_range_t, R &&rg, Alloc const &alloc) : allocator_(alloc)
+    constexpr deque(::std::from_range_t, R &&rg, Alloc const &alloc = Alloc()) : allocator_(alloc)
     {
         assert(allocator_ == alloc);
         construct_guard_ guard(this);
@@ -2194,17 +2168,7 @@ class deque
         }
     }
 
-    constexpr deque(::std::initializer_list<T> const ilist)
-    {
-        if (ilist.size())
-        {
-            construct_guard_ guard(this);
-            from_range_noguard_(ilist.begin(), ilist.end());
-            guard.release();
-        }
-    }
-
-    constexpr deque(::std::initializer_list<T> const ilist, Alloc const &alloc) : allocator_(alloc)
+    constexpr deque(::std::initializer_list<T> const ilist, Alloc const &alloc = Alloc()) : allocator_(alloc)
     {
         assert(allocator_ == alloc);
         if (ilist.size())
@@ -2296,12 +2260,12 @@ class deque
         from_range_noguard_(::std::forward<R>(rg));
     }
 
-    constexpr void assign(::std::size_t const count, T const &value)
+    constexpr void assign(size_type const count, T const &value)
     {
         clear();
         if (count)
         {
-            auto const res = deque_detail::calc_cap<T>(count);
+            auto const res = deque_detail::calc_cap<T>(static_cast<::std::size_t>(count));
             extent_block_(res.block_size);
             construct_(res.full_blocks, res.rem_elems, value);
         }
@@ -2340,7 +2304,7 @@ class deque
             if (!(check_block && check_elem))
             {
 #if defined(__cpp_exceptions)
-                throw ::std::out_of_range{"bizwen::deque::at"};
+                throw ::std::out_of_range("bizwen::deque::at");
 #else
                 ::std::terminate();
 #endif
@@ -2407,22 +2371,22 @@ class deque
         }
     }
 
-    constexpr T &at(::std::size_t const pos) noexcept
+    constexpr T &at(size_type const pos) noexcept
     {
         return at_impl_<true>(pos);
     }
 
-    constexpr T const &at(::std::size_t const pos) const noexcept
+    constexpr T const &at(size_type const pos) const noexcept
     {
         return at_impl_<true>(pos);
     }
 
-    constexpr T &operator[](::std::size_t const pos) noexcept
+    constexpr T &operator[](size_type const pos) noexcept
     {
         return at_impl_(pos);
     }
 
-    constexpr T const &operator[](::std::size_t const pos) const noexcept
+    constexpr T const &operator[](size_type const pos) const noexcept
     {
         return at_impl_(pos);
     }
@@ -2482,7 +2446,7 @@ class deque
             }
             else if (block_size)
             {
-                auto const begin = *(block_elem_end_ - ::std::size_t(1));
+                auto const begin = ::std::to_address(*(block_elem_end_ - ::std::size_t(1)));
                 auto const last = begin + deque_detail::block_elements_v<T>;
                 elem_end_(begin, last, last);
             }
@@ -2515,7 +2479,7 @@ class deque
             }
             else if (block_size)
             {
-                auto const begin = *block_elem_begin_;
+                auto const begin = ::std::to_address(*block_elem_begin_);
                 auto const last = begin + deque_detail::block_elements_v<T>;
                 elem_begin_(begin, last, begin);
             }
@@ -2659,13 +2623,13 @@ class deque
     template <typename R>
     constexpr void append_range_noguard_(R &&rg)
     {
-        if (::std::ranges::empty(rg))
-        {
-            return;
-        }
         if constexpr (::std::ranges::sized_range<R>)
         {
-            reserve_back_(::std::ranges::size(rg));
+            if (::std::ranges::empty(rg))
+            {
+                return;
+            }
+            reserve_back_(static_cast<::std::size_t>(::std::ranges::size(rg)));
             for (auto &&i : rg)
             {
                 emplace_back_noalloc_(::std::forward<decltype(i)>(i));
@@ -2685,7 +2649,7 @@ class deque
         {
             emplace_front(*first);
         }
-        ::std::ranges::reverse(begin(), begin() + (size() - old_size));
+        ::std::ranges::reverse(begin(), begin() + static_cast<difference_type>(size() - old_size));
     }
 
     template <::std::bidirectional_iterator U>
@@ -2698,6 +2662,9 @@ class deque
         }
     }
 
+// TRANSITION: EDG不能区分该重载和bidirectional_iterator重载的区别
+// https://developercommunity.visualstudio.com/t/IntellisenceEDG-cannot-correctly-determ/10981026
+#if !defined(__EDG__)
     template <::std::random_access_iterator U>
     constexpr void prepend_range_noguard_(U &&first, U &&last)
     {
@@ -2708,17 +2675,19 @@ class deque
             emplace_front_noalloc_(*last);
         }
     }
+#endif
 
     template <typename R>
     constexpr void prepend_range_noguard_(R &&rg)
     {
-        if (::std::ranges::empty(rg))
+        if constexpr (::std::ranges::sized_range<R> && ::std::ranges::bidirectional_range<R> &&
+                      ::std::is_same_v<decltype(::std::ranges::begin(rg)), decltype(::std::ranges::end(rg))>)
         {
-            return;
-        }
-        if constexpr (::std::ranges::sized_range<R> && ::std::ranges::bidirectional_range<R>)
-        {
-            reserve_front_(::std::ranges::size(rg));
+            if (::std::ranges::empty(rg))
+            {
+                return;
+            }
+            reserve_front_(static_cast<::std::size_t>(::std::ranges::size(rg)));
             auto first = ::std::ranges::begin(rg);
             auto last = ::std::ranges::end(rg);
             for (; first != last;)
@@ -2733,13 +2702,17 @@ class deque
         }
         else if constexpr (::std::ranges::sized_range<R>)
         {
-            auto const count = ::std::ranges::size(rg);
+            if (::std::ranges::empty(rg))
+            {
+                return;
+            }
+            auto const count = static_cast<::std::size_t>(::std::ranges::size(rg));
             reserve_front_(count);
             for (auto &&i : rg)
             {
                 emplace_front_noalloc_(::std::forward<decltype(i)>(i));
             }
-            ::std::ranges::reverse(begin(), begin() + count);
+            ::std::ranges::reverse(begin(), begin() + static_cast<::std::ptrdiff_t>(count));
         }
         else
         {
@@ -2824,12 +2797,12 @@ class deque
 
   public:
     // 注意必须调用clear，使得空容器的elem_begin/elem_end都为空指针
-    constexpr void resize(::std::size_t const new_size)
+    constexpr void resize(size_type const new_size)
     {
         new_size == ::std::size_t(0) ? clear() : resize_unified_(new_size);
     }
 
-    constexpr void resize(::std::size_t const new_size, T const &t)
+    constexpr void resize(size_type const new_size, T const &t)
     {
         new_size == ::std::size_t(0) ? clear() : resize_unified_(new_size, t);
     }
@@ -2949,7 +2922,7 @@ class deque
             reserve_back_(::std::size_t(2));
             emplace_back_noalloc_(::std::forward<Args>(args)...); // 满足标准要求经过A::construct
             // back_emplace向后移动1个元素并插入，因此先reserve以获得一个不失效的pos
-            auto new_pos = begin() + front_diff;
+            auto new_pos = begin() + static_cast<difference_type>(front_diff);
             back_emplace_(new_pos.block_elem_curr_, new_pos.elem_curr_);
             *new_pos = ::std::move(back());
             pop_back();
@@ -2959,7 +2932,7 @@ class deque
         {
             reserve_front_(::std::size_t(2));
             emplace_front_noalloc_(::std::forward<Args>(args)...);
-            auto new_pos = end() - back_diff;
+            auto new_pos = end() - static_cast<difference_type>(back_diff);
             front_emplace_(new_pos.block_elem_curr_, new_pos.elem_curr_);
             *(--new_pos) = ::std::move(front());
             pop_front();
@@ -2994,7 +2967,7 @@ class deque
     {
         reserve_back_(count);
         auto first = begin();
-        auto last = first + static_cast<::std::ptrdiff_t>(count);
+        auto last = first + static_cast<difference_type>(count);
         for (; first != last; ++first)
         {
             emplace_back_noalloc_(::std::move(*first));
@@ -3022,17 +2995,13 @@ class deque
         requires ::std::convertible_to<::std::ranges::range_value_t<R>, T>
     constexpr iterator insert_range(const_iterator const pos, R &&rg)
     {
-        if (::std::ranges::empty(rg))
-        {
-            return pos.remove_const_();
-        }
         auto const begin_pre = begin();
         auto const end_pre = end();
         if (pos == end_pre)
         {
             auto const old_size = size();
             append_range_noguard_(::std::forward<R>(rg));
-            return begin() + static_cast<::std::ptrdiff_t>(old_size);
+            return begin() + static_cast<difference_type>(old_size);
         }
         if (pos == begin_pre)
         {
@@ -3046,18 +3015,18 @@ class deque
         {
             auto const old_size = size();
             append_range_noguard_(::std::forward<R>(rg));
-            ::std::ranges::rotate(begin() + static_cast<::std::ptrdiff_t>(front_diff),
-                                  begin() + static_cast<::std::ptrdiff_t>(old_size), end());
-            return begin() + static_cast<::std::ptrdiff_t>(front_diff);
+            ::std::ranges::rotate(begin() + static_cast<difference_type>(front_diff),
+                                  begin() + static_cast<difference_type>(old_size), end());
+            return begin() + static_cast<difference_type>(front_diff);
         }
         else
         {
             auto const old_size = size();
             prepend_range_noguard_(::std::forward<R>(rg));
             auto const count = size() - old_size;
-            ::std::ranges::rotate(begin(), begin() + static_cast<::std::ptrdiff_t>(count),
-                                  begin() + static_cast<::std::ptrdiff_t>(count + front_diff));
-            return begin() + static_cast<::std::ptrdiff_t>(front_diff);
+            ::std::ranges::rotate(begin(), begin() + static_cast<difference_type>(count),
+                                  begin() + static_cast<difference_type>(count + front_diff));
+            return begin() + static_cast<difference_type>(front_diff);
         }
 #else
         if (back_diff <= front_diff)
@@ -3066,7 +3035,7 @@ class deque
             move_back_to_front_(back_diff);
             append_range_noguard_(::std::forward<R>(rg));
             move_front_to_back_(back_diff);
-            return begin() + static_cast<::std::ptrdiff_t>(front_diff);
+            return begin() + static_cast<difference_type>(front_diff);
         }
         else
         {
@@ -3074,7 +3043,7 @@ class deque
             move_front_to_back_(front_diff);
             prepend_range_noguard_(::std::forward<R>(rg));
             move_back_to_front_(front_diff);
-            return begin() + static_cast<::std::ptrdiff_t>(front_diff);
+            return begin() + static_cast<difference_type>(front_diff);
         }
 #endif
     }
@@ -3093,7 +3062,7 @@ class deque
         {
             auto const old_size = size();
             append_range_noguard_(::std::forward<U>(first), ::std::forward<V>(last));
-            return begin() + static_cast<::std::ptrdiff_t>(old_size);
+            return begin() + static_cast<difference_type>(old_size);
         }
         if (pos == begin_pre)
         {
@@ -3107,18 +3076,18 @@ class deque
         {
             auto const old_size = size();
             append_range_noguard_(::std::forward<U>(first), ::std::forward<V>(last));
-            ::std::ranges::rotate(begin() + static_cast<::std::ptrdiff_t>(front_diff),
-                                  begin() + static_cast<::std::ptrdiff_t>(old_size), end());
-            return begin() + static_cast<::std::ptrdiff_t>(front_diff);
+            ::std::ranges::rotate(begin() + static_cast<difference_type>(front_diff),
+                                  begin() + static_cast<difference_type>(old_size), end());
+            return begin() + static_cast<difference_type>(front_diff);
         }
         else
         {
             auto const old_size = size();
             prepend_range_noguard_(::std::forward<U>(first), ::std::forward<V>(last));
             auto const count = size() - old_size;
-            ::std::ranges::rotate(begin(), begin() + static_cast<::std::ptrdiff_t>(count),
-                                  begin() + static_cast<::std::ptrdiff_t>(count + front_diff));
-            return begin() + static_cast<::std::ptrdiff_t>(front_diff);
+            ::std::ranges::rotate(begin(), begin() + static_cast<difference_type>(count),
+                                  begin() + static_cast<difference_type>(count + front_diff));
+            return begin() + static_cast<difference_type>(front_diff);
         }
 #else
         if (back_diff <= front_diff)
@@ -3127,7 +3096,7 @@ class deque
             move_back_to_front_(back_diff);
             append_range_noguard_(::std::forward<U>(first), ::std::forward<V>(last));
             move_front_to_back_(back_diff);
-            return begin() + static_cast<::std::ptrdiff_t>(front_diff);
+            return begin() + static_cast<difference_type>(front_diff);
         }
         else
         {
@@ -3135,7 +3104,7 @@ class deque
             move_front_to_back_(front_diff);
             prepend_range_noguard_(::std::forward<U>(first), ::std::forward<V>(last));
             move_back_to_front_(front_diff);
-            return begin() + static_cast<::std::ptrdiff_t>(front_diff);
+            return begin() + static_cast<difference_type>(front_diff);
         }
 #endif
     }
@@ -3145,7 +3114,7 @@ class deque
         return insert(pos, ilist.begin(), ilist.end());
     }
 
-    constexpr iterator insert(const_iterator const pos, ::std::size_t const count, T const &value)
+    constexpr iterator insert(const_iterator const pos, size_type const count, T const &value)
     {
 #if defined(__cpp_lib_ranges_repeat)
         return insert_range(pos, ::std::ranges::views::repeat(value, count));
@@ -3197,17 +3166,17 @@ class deque
             pop_back();
             return end();
         }
-        auto const back_diff = end_pre - pos + ::std::size_t(0);
-        auto const front_diff = pos - begin_pre + ::std::size_t(0);
+        auto const back_diff = end_pre - pos;
+        auto const front_diff = pos - begin_pre;
         if (back_diff <= front_diff)
         {
-            ::std::ranges::move((pos + ::std::size_t(1)).remove_const_(), end(), pos.remove_const_());
+            ::std::ranges::move((pos + ::std::ptrdiff_t(1)).remove_const_(), end(), pos.remove_const_());
             pop_back();
             return begin() + front_diff;
         }
         else
         {
-            ::std::ranges::move_backward(begin(), pos.remove_const_(), (pos + ::std::size_t(1)).remove_const_());
+            ::std::ranges::move_backward(begin(), pos.remove_const_(), (pos + ::std::ptrdiff_t(1)).remove_const_());
             pop_front();
             return begin() + front_diff;
         }
@@ -3219,26 +3188,26 @@ class deque
         auto const end_pre = end();
         if (first == begin_pre)
         {
-            pop_front_n_(last - first);
+            pop_front_n_(static_cast<::std::size_t>(last - first));
             return begin();
         }
         if (last == end_pre)
         {
-            pop_back_n_(last - first);
+            pop_back_n_(static_cast<::std::size_t>(last - first));
             return end();
         }
-        auto const back_diff = end_pre - last + ::std::size_t(0);
-        auto const front_diff = first - begin_pre + ::std::size_t(0);
+        auto const back_diff = end_pre - last;
+        auto const front_diff = first - begin_pre;
         if (back_diff <= front_diff)
         {
             ::std::ranges::move(last, end(), first.remove_const_());
-            pop_back_n_(last - first);
+            pop_back_n_(static_cast<::std::size_t>(last - first));
             return begin() + front_diff;
         }
         else
         {
             ::std::ranges::move_backward(begin(), first.remove_const_(), last.remove_const_());
-            pop_front_n_(last - first);
+            pop_front_n_(static_cast<::std::size_t>(last - first));
             return begin() + front_diff;
         }
     }
@@ -3251,56 +3220,44 @@ class deque
 #endif
 };
 
-namespace deque_detail
-{
-template <typename A>
-concept mini_alloc = requires(A &a) {
-    typename A::value_type;
-    a.allocate(::std::size_t(0));
-};
-} // namespace deque_detail
-
-template <::std::input_iterator U, typename V>
-deque(U, V) -> deque<typename ::std::iterator_traits<U>::value_type,
-                     typename ::std::allocator<typename ::std::iterator_traits<U>::value_type>>;
-
+// TRANSITION: CWG2369, MSVC
 template <::std::input_iterator U, typename V,
-          deque_detail::mini_alloc Alloc = ::std::allocator<typename ::std::iterator_traits<U>::value_type>>
-deque(U, V, Alloc) -> deque<typename ::std::iterator_traits<U>::value_type, Alloc>;
+          typename Alloc = ::std::allocator<typename ::std::iterator_traits<U>::value_type>,
+          typename = ::std::enable_if_t<deque_detail::mini_alloc<Alloc>>>
+deque(U, V, Alloc = Alloc()) -> deque<typename ::std::iterator_traits<U>::value_type, Alloc>;
 
 #if defined(__cpp_lib_containers_ranges)
-template <::std::ranges::input_range R>
-deque(::std::from_range_t, R &&)
-    -> deque<::std::ranges::range_value_t<R>, ::std::allocator<::std::ranges::range_value_t<R>>>;
-
-template <::std::ranges::input_range R,
-          deque_detail::mini_alloc Alloc = ::std::allocator<::std::ranges::range_value_t<R>>>
-deque(::std::from_range_t, R &&, Alloc) -> deque<::std::ranges::range_value_t<R>, Alloc>;
+// TRANSITION: CWG2369, MSVC
+template <::std::ranges::input_range R, typename Alloc = ::std::allocator<::std::ranges::range_value_t<R>>,
+          typename = ::std::enable_if_t<deque_detail::mini_alloc<Alloc>>>
+deque(::std::from_range_t, R &&, Alloc = Alloc()) -> deque<::std::ranges::range_value_t<R>, Alloc>;
 #endif
 
-template <typename T, typename Alloc, typename U = T>
-inline constexpr ::std::size_t erase(deque<T, Alloc> &c, U const &value)
+BIZWEN_EXPORT template <typename T, typename Alloc, typename U = T>
+inline constexpr auto erase(deque<T, Alloc> &c, U const &value)
 {
     auto const it = ::std::remove(c.begin(), c.end(), value);
-    auto const r = c.end() - it;
+    auto const r = static_cast<deque<T, Alloc>::size_type>(c.end() - it);
     c.resize(c.size() - r);
     return r;
 }
 
-template <typename T, typename Alloc, typename Pred>
-inline constexpr ::std::size_t erase_if(deque<T, Alloc> &c, Pred pred)
+BIZWEN_EXPORT template <typename T, typename Alloc, typename Pred>
+inline constexpr auto erase_if(deque<T, Alloc> &c, Pred pred)
 {
     auto const it = ::std::remove_if(c.begin(), c.end(), pred);
-    auto const r = c.end() - it;
+    auto const r = static_cast<deque<T, Alloc>::size_type>(c.end() - it);
     c.resize(c.size() - r);
     return r;
 }
 
 namespace pmr
 {
-template <typename T>
+BIZWEN_EXPORT template <typename T>
 using deque = deque<T, ::std::pmr::polymorphic_allocator<T>>;
 }
 } // namespace bizwen
+
+#undef BIZWEN_EXPORT
 
 #endif
