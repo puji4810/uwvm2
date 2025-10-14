@@ -146,13 +146,116 @@ namespace uwvm2::uwvm::cmdline::params::details
 
             auto currp2_str{currp2->str};
 
-# if defined(UWVM_CPP_EXCEPTIONS) && !defined(UWVM_TERMINATE_IMME_WHEN_PARSE)
+# if defined(_WIN32) && !defined(_WIN32_WINDOWS)
+            if(currp2_str.starts_with(u8"::NT::"))
+            {
+                // nt path
+
+                auto const currp2_str_nt_subview{currp2_str.subview(6uz)};
+
+                if(::uwvm2::uwvm::io::show_nt_path_warning)
+                {
+                    // Output the main information and memory indication
+                    ::fast_io::io::perr(::uwvm2::uwvm::io::u8log_output,
+                                        // 1
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL_AND_SET_WHITE),
+                                        u8"uwvm: ",
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_YELLOW),
+                                        u8"[warn]  ",
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
+                                        u8"Resolve to NT path: \"",
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_YELLOW),
+                                        currp2_str_nt_subview,
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
+                                        u8"\".",
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_ORANGE),
+                                        u8" (nt-path)\n",
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL));
+
+                    if(::uwvm2::uwvm::io::nt_path_warning_fatal) [[unlikely]]
+                    {
+                        ::fast_io::io::perr(::uwvm2::uwvm::io::u8log_output,
+                                            ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL_AND_SET_WHITE),
+                                            u8"uwvm: ",
+                                            ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_LT_RED),
+                                            u8"[fatal] ",
+                                            ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
+                                            u8"Convert warnings to fatal errors. ",
+                                            ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_ORANGE),
+                                            u8"(nt-path)\n\n",
+                                            ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL));
+                        ::fast_io::fast_terminate();
+                    }
+                }
+
+#  if defined(UWVM_CPP_EXCEPTIONS) && !defined(UWVM_TERMINATE_IMME_WHEN_PARSE)
+                try
+#  endif
+                {
+                    ::uwvm2::uwvm::io::u8log_output.reopen(::fast_io::io_kernel, currp2_str_nt_subview, ::fast_io::open_mode::out);
+                }
+#  if defined(UWVM_CPP_EXCEPTIONS) && !defined(UWVM_TERMINATE_IMME_WHEN_PARSE)
+                catch(::fast_io::error e)
+                {
+                    ::fast_io::io::perr(::uwvm2::uwvm::io::u8log_output,
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL_AND_SET_WHITE),
+                                        u8"uwvm: ",
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RED),
+                                        u8"[error] ",
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
+                                        u8"Unable to open log output file \"",
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_CYAN),
+                                        currp2_str_nt_subview,
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
+                                        u8"\": ",
+                                        e,
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL),
+                                        u8"\n");
+                    return ::uwvm2::utils::cmdline::parameter_return_type::return_m1_imme;
+                }
+#  endif
+            }
+            else
+            {
+                // win32 path
+
+#  if defined(UWVM_CPP_EXCEPTIONS) && !defined(UWVM_TERMINATE_IMME_WHEN_PARSE)
+                try
+#  endif
+                {
+                    ::uwvm2::uwvm::io::u8log_output.reopen(currp2_str, ::fast_io::open_mode::out);
+                }
+#  if defined(UWVM_CPP_EXCEPTIONS) && !defined(UWVM_TERMINATE_IMME_WHEN_PARSE)
+                catch(::fast_io::error e)
+                {
+                    ::fast_io::io::perr(::uwvm2::uwvm::io::u8log_output,
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL_AND_SET_WHITE),
+                                        u8"uwvm: ",
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RED),
+                                        u8"[error] ",
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
+                                        u8"Unable to open log output file \"",
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_CYAN),
+                                        currp2_str,
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
+                                        u8"\": ",
+                                        e,
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL),
+                                        u8"\n");
+                    return ::uwvm2::utils::cmdline::parameter_return_type::return_m1_imme;
+                }
+#  endif
+            }
+# else
+            // win9x and posix
+
+#  if defined(UWVM_CPP_EXCEPTIONS) && !defined(UWVM_TERMINATE_IMME_WHEN_PARSE)
             try
-# endif
+#  endif
             {
                 ::uwvm2::uwvm::io::u8log_output.reopen(currp2_str, ::fast_io::open_mode::out);
             }
-# if defined(UWVM_CPP_EXCEPTIONS) && !defined(UWVM_TERMINATE_IMME_WHEN_PARSE)
+#  if defined(UWVM_CPP_EXCEPTIONS) && !defined(UWVM_TERMINATE_IMME_WHEN_PARSE)
             catch(::fast_io::error e)
             {
                 ::fast_io::io::perr(::uwvm2::uwvm::io::u8log_output,
@@ -169,12 +272,13 @@ namespace uwvm2::uwvm::cmdline::params::details
                                     e,
                                     ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL),
                                     u8"\n"
-#  ifndef _WIN32
+#   ifndef _WIN32
                                     u8"\n"
-#  endif
+#   endif
                 );
                 return ::uwvm2::utils::cmdline::parameter_return_type::return_m1_imme;
             }
+#  endif
 # endif
         }
         else
