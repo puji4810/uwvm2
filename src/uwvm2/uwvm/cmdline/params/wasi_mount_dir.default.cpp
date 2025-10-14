@@ -70,7 +70,7 @@ namespace uwvm2::uwvm::cmdline::params::details
         }
 
         // Parse wasidir
-        ::uwvm2::utils::container::u8string_view wasidir{param_cursor->str};
+        ::uwvm2::utils::container::u8cstring_view const wasidir{param_cursor->str};
 
         if(wasidir.empty()) [[unlikely]]
         {
@@ -116,15 +116,17 @@ namespace uwvm2::uwvm::cmdline::params::details
             return ::uwvm2::utils::cmdline::parameter_return_type::return_m1_imme;
         }
 
+        ::uwvm2::utils::container::u8cstring_view const system_dir{param_cursor->str};
+
         // get system dir
         ::fast_io::dir_file entry;  // no initialize
 
 #if defined(_WIN32) && !defined(_WIN32_WINDOWS)
-        if(wasidir.starts_with(u8"::NT::"))
+        if(system_dir.starts_with(u8"::NT::"))
         {
             // nt path
 
-            auto const wasidir_nt_subview{wasidir.subview(6uz)};
+            auto const systemdir_nt_subview{system_dir.subview(6uz)};
 
             if(::uwvm2::uwvm::io::show_nt_path_warning)
             {
@@ -138,7 +140,7 @@ namespace uwvm2::uwvm::cmdline::params::details
                                     ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
                                     u8"Resolve to NT path: \"",
                                     ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_YELLOW),
-                                    wasidir_nt_subview,
+                                    systemdir_nt_subview,
                                     ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
                                     u8"\".",
                                     ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_ORANGE),
@@ -165,7 +167,11 @@ namespace uwvm2::uwvm::cmdline::params::details
             try
 # endif
             {
-                ::fast_io::native_file tmp{::fast_io::io_kernel, wasidir_nt_subview, ::fast_io::open_mode::directory};
+                ::fast_io::native_file tmp{
+                    ::fast_io::io_kernel,
+                    ::fast_io::u8cstring_view{::fast_io::containers::null_terminated, systemdir_nt_subview},
+                    ::fast_io::open_mode::directory
+                };
                 entry = ::fast_io::dir_file{tmp.release()};
             }
 # ifdef UWVM_CPP_EXCEPTIONS
@@ -179,7 +185,7 @@ namespace uwvm2::uwvm::cmdline::params::details
                                     ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
                                     u8"Unable to open system dir \"",
                                     ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_CYAN),
-                                    wasidir_nt_subview,
+                                    systemdir_nt_subview,
                                     ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
                                     u8"\": ",
                                     e,
@@ -197,7 +203,7 @@ namespace uwvm2::uwvm::cmdline::params::details
             try
 # endif
             {
-                entry = ::fast_io::dir_file{wasidir};
+                entry = ::fast_io::dir_file{system_dir};
             }
 # ifdef UWVM_CPP_EXCEPTIONS
             catch(::fast_io::error e)
@@ -210,7 +216,7 @@ namespace uwvm2::uwvm::cmdline::params::details
                                     ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
                                     u8"Unable to open system dir \"",
                                     ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_CYAN),
-                                    wasidir,
+                                    system_dir,
                                     ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
                                     u8"\": ",
                                     e,
@@ -229,7 +235,7 @@ namespace uwvm2::uwvm::cmdline::params::details
         try
 # endif
         {
-            entry = ::fast_io::dir_file{wasidir};
+            entry = ::fast_io::dir_file{system_dir};
         }
 # ifdef UWVM_CPP_EXCEPTIONS
         catch(::fast_io::error e)
@@ -242,7 +248,7 @@ namespace uwvm2::uwvm::cmdline::params::details
                                 ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
                                 u8"Unable to open system dir \"",
                                 ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_CYAN),
-                                wasidir,
+                                system_dir,
                                 ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
                                 u8"\": ",
                                 e,
