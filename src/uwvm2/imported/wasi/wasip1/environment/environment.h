@@ -107,7 +107,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::environment
 
     struct mount_dir_root_t
     {
-        ::uwvm2::utils::container::u8string_view preload_dir{};
+        ::uwvm2::utils::container::u8string preload_dir{};
         ::fast_io::dir_file entry{};
     };
 

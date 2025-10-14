@@ -516,10 +516,12 @@ namespace uwvm2::uwvm::cmdline::params::details
         auto& env{::uwvm2::uwvm::wasm::storage::default_wasi_env};
         for(auto const& mr: env.mount_dir_roots)
         {
-            auto const existing{mr.preload_dir};
+            auto const& existing{mr.preload_dir};
+            // Convert to view for normalization and comparisons
+            ::uwvm2::utils::container::u8string_view const existing_sv{existing.data(), existing.size()};
             // Supports normalization of both absolute paths and relative paths (including “.”).
-            auto const existing_norm{(!existing.empty() && existing.front_unchecked() == u8'/') ? canonicalize_wasidir(existing)
-                                                                                                : canonicalize_wasidir_rel(existing)};
+            auto const existing_norm{(!existing_sv.empty() && existing_sv.front_unchecked() == u8'/') ? canonicalize_wasidir(existing_sv)
+                                                                                                      : canonicalize_wasidir_rel(existing_sv)};
             // Note: stored mount points are validated; they may be absolute or relative.
             constexpr auto starts_with{[](::uwvm2::utils::container::u8string_view a, ::uwvm2::utils::container::u8string_view b) constexpr noexcept -> bool
                                        {
@@ -581,8 +583,8 @@ namespace uwvm2::uwvm::cmdline::params::details
             }
         }
 
-        // Record into default_wasi_env
-        env.mount_dir_roots.emplace_back(wasidir_norm, ::std::move(entry));
+        // Record into default_wasi_env (own the string, then move)
+        env.mount_dir_roots.emplace_back(::uwvm2::utils::container::u8string{wasidir_norm}, ::std::move(entry));
 
         return ::uwvm2::utils::cmdline::parameter_return_type::def;
     }

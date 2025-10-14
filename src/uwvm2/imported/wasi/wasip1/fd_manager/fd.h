@@ -34,6 +34,7 @@
 # include <uwvm2/utils/macro/push_macros.h>
 // import
 # include <fast_io.h>
+# include <uwvm2/utils/container/impl.h>
 # include <uwvm2/utils/mutex/impl.h>
 # include <uwvm2/parser/wasm/standard/wasm1/type/impl.h>
 # include <uwvm2/imported/wasi/wasip1/abi/impl.h>
@@ -98,7 +99,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
         // The "close pos" is only valid for those in the "close" list and invalid for those in the "renumber map".
         ::std::size_t close_pos{SIZE_MAX};
 
-        ::uwvm2::utils::container::u8string_view preloaded_dir{};
+        ::uwvm2::utils::container::u8string preloaded_dir{};
 
         inline constexpr wasi_fd_t() noexcept = default;
 
