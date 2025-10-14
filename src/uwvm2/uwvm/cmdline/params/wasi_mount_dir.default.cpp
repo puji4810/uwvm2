@@ -126,7 +126,7 @@ namespace uwvm2::uwvm::cmdline::params::details
         {
             // nt path
 
-            auto const systemdir_nt_subview{system_dir.subview(6uz)};
+            ::fast_io::u8cstring_view const systemdir_nt_subview{::fast_io::containers::null_terminated, system_dir.subview(6uz)};
 
             if(::uwvm2::uwvm::io::show_nt_path_warning)
             {
@@ -167,11 +167,7 @@ namespace uwvm2::uwvm::cmdline::params::details
             try
 # endif
             {
-                ::fast_io::native_file tmp{
-                    ::fast_io::io_kernel,
-                    ::fast_io::u8cstring_view{::fast_io::containers::null_terminated, systemdir_nt_subview},
-                    ::fast_io::open_mode::directory
-                };
+                ::fast_io::native_file tmp{::fast_io::io_kernel, systemdir_nt_subview, ::fast_io::open_mode::directory};
                 entry = ::fast_io::dir_file{tmp.release()};
             }
 # ifdef UWVM_CPP_EXCEPTIONS

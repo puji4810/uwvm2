@@ -137,7 +137,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::uwvm::wasm::loader
         {
             // nt path
 
-            auto const load_file_name_nt_subview{load_file_name.subview(6uz)};
+            ::fast_io::u8cstring_view const load_file_name_nt_subview{::fast_io::containers::null_terminated, load_file_name.subview(6uz)};
 
             if(::uwvm2::uwvm::io::show_nt_path_warning)
             {

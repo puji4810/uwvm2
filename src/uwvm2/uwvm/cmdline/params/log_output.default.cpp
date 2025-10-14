@@ -151,7 +151,7 @@ namespace uwvm2::uwvm::cmdline::params::details
             {
                 // nt path
 
-                auto const currp2_str_nt_subview{currp2_str.subview(6uz)};
+                ::fast_io::u8cstring_view const currp2_str_nt_subview{::fast_io::containers::null_terminated, currp2_str.subview(6uz)};
 
                 if(::uwvm2::uwvm::io::show_nt_path_warning)
                 {
@@ -192,9 +192,7 @@ namespace uwvm2::uwvm::cmdline::params::details
                 try
 #  endif
                 {
-                    ::uwvm2::uwvm::io::u8log_output.reopen(::fast_io::io_kernel,
-                                                           ::fast_io::u8cstring_view{::fast_io::containers::null_terminated, currp2_str_nt_subview},
-                                                           ::fast_io::open_mode::out);
+                    ::uwvm2::uwvm::io::u8log_output.reopen(::fast_io::io_kernel, currp2_str_nt_subview, ::fast_io::open_mode::out);
                 }
 #  if defined(UWVM_CPP_EXCEPTIONS) && !defined(UWVM_TERMINATE_IMME_WHEN_PARSE)
                 catch(::fast_io::error e)

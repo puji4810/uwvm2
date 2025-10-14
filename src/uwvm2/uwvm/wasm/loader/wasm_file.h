@@ -98,7 +98,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::uwvm::wasm::loader
         if(load_file_name.starts_with(u8"::NT::"))
         {
             // nt path
-            auto const load_file_name_nt_subview{load_file_name.subview(6uz)};
+            ::fast_io::u8cstring_view const load_file_name_nt_subview{::fast_io::containers::null_terminated, load_file_name.subview(6uz)};
 
             if(::uwvm2::uwvm::io::show_nt_path_warning)
             {
@@ -144,10 +144,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::uwvm::wasm::loader
 # endif
 
                 // On platforms where CHAR_BIT is greater than 8, there is no need to clear the utf-8 non-low 8 bits here
-                wf.wasm_file = ::fast_io::native_file_loader{
-                    ::fast_io::io_kernel,
-                    ::fast_io::u8cstring_view{::fast_io::containers::null_terminated, load_file_name_nt_subview}
-                };
+                wf.wasm_file = ::fast_io::native_file_loader{::fast_io::io_kernel, load_file_name_nt_subview};
             }
 # ifdef UWVM_CPP_EXCEPTIONS
             catch(::fast_io::error e)
