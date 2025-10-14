@@ -118,13 +118,120 @@ namespace uwvm2::uwvm::cmdline::params::details
 
         // get system dir
         ::fast_io::dir_file entry;  // no initialize
-#ifdef UWVM_CPP_EXCEPTIONS
-        try
-#endif
+
+#if defined(_WIN32) && !defined(_WIN32_WINDOWS)
+        if(wasidir.starts_with(u8"::NT::"))
         {
-            entry = ::fast_io::dir_file{param_cursor->str};
+            // nt path
+
+            auto const wasidir_nt_subview{wasidir.subview(6uz)};
+
+            if(::uwvm2::uwvm::io::show_nt_path_warning)
+            {
+                // Output the main information and memory indication
+                ::fast_io::io::perr(::uwvm2::uwvm::io::u8log_output,
+                                    // 1
+                                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL_AND_SET_WHITE),
+                                    u8"uwvm: ",
+                                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_YELLOW),
+                                    u8"[warn]  ",
+                                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
+                                    u8"Resolve to NT path: \"",
+                                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_YELLOW),
+                                    wasidir_nt_subview,
+                                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
+                                    u8"\".",
+                                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_ORANGE),
+                                    u8" (nt-path)\n",
+                                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL));
+
+                if(::uwvm2::uwvm::io::nt_path_warning_fatal) [[unlikely]]
+                {
+                    ::fast_io::io::perr(::uwvm2::uwvm::io::u8log_output,
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL_AND_SET_WHITE),
+                                        u8"uwvm: ",
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_LT_RED),
+                                        u8"[fatal] ",
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
+                                        u8"Convert warnings to fatal errors. ",
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_ORANGE),
+                                        u8"(nt-path)\n\n",
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL));
+                    ::fast_io::fast_terminate();
+                }
+            }
+
+# ifdef UWVM_CPP_EXCEPTIONS
+            try
+# endif
+            {
+                ::fast_io::native_file tmp{::fast_io::io_kernel, wasidir_nt_subview, ::fast_io::open_mode::directory};
+                entry = ::fast_io::dir_file{tmp.release()};
+            }
+# ifdef UWVM_CPP_EXCEPTIONS
+            catch(::fast_io::error e)
+            {
+                ::fast_io::io::perr(::uwvm2::uwvm::io::u8log_output,
+                                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL_AND_SET_WHITE),
+                                    u8"uwvm: ",
+                                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RED),
+                                    u8"[error] ",
+                                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
+                                    u8"Unable to open system dir \"",
+                                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_CYAN),
+                                    wasidir_nt_subview,
+                                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
+                                    u8"\": ",
+                                    e,
+                                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL),
+                                    u8"\n");
+                return ::uwvm2::utils::cmdline::parameter_return_type::return_m1_imme;
+            }
+# endif
         }
-#ifdef UWVM_CPP_EXCEPTIONS
+        else
+        {
+            // win32 path
+
+# ifdef UWVM_CPP_EXCEPTIONS
+            try
+# endif
+            {
+                entry = ::fast_io::dir_file{wasidir};
+            }
+# ifdef UWVM_CPP_EXCEPTIONS
+            catch(::fast_io::error e)
+            {
+                ::fast_io::io::perr(::uwvm2::uwvm::io::u8log_output,
+                                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL_AND_SET_WHITE),
+                                    u8"uwvm: ",
+                                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RED),
+                                    u8"[error] ",
+                                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
+                                    u8"Unable to open system dir \"",
+                                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_CYAN),
+                                    wasidir,
+                                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
+                                    u8"\": ",
+                                    e,
+                                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL),
+                                    u8"\n");
+                return ::uwvm2::utils::cmdline::parameter_return_type::return_m1_imme;
+            }
+# endif
+        }
+
+#else
+
+        // win9x and posix
+
+# ifdef UWVM_CPP_EXCEPTIONS
+        try
+# endif
+        {
+            entry = ::fast_io::dir_file{wasidir};
+        }
+# ifdef UWVM_CPP_EXCEPTIONS
         catch(::fast_io::error e)
         {
             ::fast_io::io::perr(::uwvm2::uwvm::io::u8log_output,
@@ -135,18 +242,19 @@ namespace uwvm2::uwvm::cmdline::params::details
                                 ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
                                 u8"Unable to open system dir \"",
                                 ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_CYAN),
-                                param_cursor->str,
+                                wasidir,
                                 ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
                                 u8"\": ",
                                 e,
                                 ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL),
                                 u8"\n"
-# ifndef _WIN32
+#  ifndef _WIN32
                                 u8"\n"
-# endif
+#  endif
             );
             return ::uwvm2::utils::cmdline::parameter_return_type::return_m1_imme;
         }
+# endif
 #endif
 
         param_cursor->type = ::uwvm2::utils::cmdline::parameter_parsing_results_type::occupied_arg;

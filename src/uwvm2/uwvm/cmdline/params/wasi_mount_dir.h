@@ -56,7 +56,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::uwvm::cmdline::params
         .name{u8"--wasi-mount-dir"},
         .describe{
             u8"Mount a host directory to the WASI sandbox at a fixed WASI mount point. Usage requires two arguments: <wasi dir> <system dir>. The <wasi dir> may be an absolute POSIX-style path (e.g. /a/x/d) or a relative path. In both modes, '//' and any path segment of '.' or '..' are forbidden; '.' is only allowed when used alone as the entire mount point."},
-        .usage{u8"<wasi dir:str> <system dir:str>"},
+        .usage{u8"<wasi dir:str> <system dir:path>"},
         .alias{::uwvm2::utils::cmdline::kns_u8_str_scatter_t{::std::addressof(details::wasi_mount_dir_alias), 1uz}},
         .handle{::std::addressof(details::wasi_mount_dir_callback)},
         .pretreatment{nullptr},

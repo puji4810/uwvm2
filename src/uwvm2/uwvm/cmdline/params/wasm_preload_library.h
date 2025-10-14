@@ -56,7 +56,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::uwvm::cmdline::params
     inline constexpr ::uwvm2::utils::cmdline::parameter wasm_preload_library{
         .name{u8"--wasm-preload-library"},
         .describe{u8"Preloading wasm files as dynamic libraries, module name can be renamed via argument."},
-        .usage{u8"<wasm:str> (<rename:str>)"},
+        .usage{u8"<wasm:path> (<rename:str>)"},
         .alias{::uwvm2::utils::cmdline::kns_u8_str_scatter_t{::std::addressof(details::wasm_preload_library_alias), 1uz}},
         .handle{::std::addressof(details::wasm_preload_library_callback)},
         .cate{::uwvm2::utils::cmdline::categorization::wasm}};

@@ -51,7 +51,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::uwvm::cmdline::params
     inline constexpr ::uwvm2::utils::cmdline::parameter run{
         .name{u8"--run"},
         .describe{u8"Run WebAssembly."},
-        .usage{u8"<file argv[0]:str> <argv[1]:str> <argv[2]:str> ..."},
+        .usage{u8"<file argv[0]:path> <argv[1]:str> <argv[2]:str> ..."},
         .alias{::uwvm2::utils::cmdline::kns_u8_str_scatter_t{details::run_alias.data(), details::run_alias.size()}}};
 #if defined(__clang__)
 # pragma clang diagnostic pop

@@ -58,7 +58,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::uwvm::cmdline::params
     inline constexpr ::uwvm2::utils::cmdline::parameter wasm_register_dl{
         .name{u8"--wasm-register-dl"},
         .describe{u8"Loads a dynamic library and registers its exported functions as a WebAssembly module, module name can be renamed via argument."},
-        .usage{u8"<dl:str> (<rename:str>)"},
+        .usage{u8"<dl:path> (<rename:str>)"},
         .alias{::uwvm2::utils::cmdline::kns_u8_str_scatter_t{::std::addressof(details::wasm_register_dl_alias), 1uz}},
         .handle{::std::addressof(details::wasm_register_dl_callback)},
         .cate{::uwvm2::utils::cmdline::categorization::wasm}};
