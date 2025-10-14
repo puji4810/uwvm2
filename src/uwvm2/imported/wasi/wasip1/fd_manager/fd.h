@@ -110,7 +110,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
 
         inline constexpr wasi_fd_t& operator= (wasi_fd_t&& other) noexcept = delete;
 
-        inline constexpr ~wasi_fd_t() = default;
+        inline ~wasi_fd_t() = default;
     };
 
     struct wasi_fd_unique_ptr_t UWVM_TRIVIALLY_RELOCATABLE_IF_ELIGIBLE

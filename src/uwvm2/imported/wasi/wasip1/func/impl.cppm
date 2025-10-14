@@ -61,6 +61,8 @@ export import :fd_prestat_get_wasm64;
 export import :fd_prestat_get;
 export import :fd_pwrite_wasm64;
 export import :fd_pwrite;
+export import :fd_read_wasm64;
+export import :fd_read;
 
 
 #ifndef UWVM_MODULE

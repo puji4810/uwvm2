@@ -61,5 +61,7 @@
 # include "fd_prestat_get.h"
 # include "fd_pwrite_wasm64.h"
 # include "fd_pwrite.h"
+# include "fd_read_wasm64.h"
+# include "fd_read.h"
 
 #endif
