@@ -97,12 +97,18 @@ namespace uwvm2::uwvm::cmdline::params::details
             ::uwvm2::uwvm::io::untrusted_dl_warning_fatal = true;
             ::uwvm2::uwvm::io::dl_warning_fatal = true;
             ::uwvm2::uwvm::io::depend_warning_fatal = true;
+#if defined(_WIN32) && !defined(_WIN32_WINDOWS)
+            ::uwvm2::uwvm::io::nt_path_warning_fatal = true;
+#endif
         }
         else if(currp1_str == u8"vm") { ::uwvm2::uwvm::io::vm_warning_fatal = true; }
         else if(currp1_str == u8"parser") { ::uwvm2::uwvm::io::parser_warning_fatal = true; }
         else if(currp1_str == u8"untrusted-dl") { ::uwvm2::uwvm::io::untrusted_dl_warning_fatal = true; }
         else if(currp1_str == u8"dl") { ::uwvm2::uwvm::io::dl_warning_fatal = true; }
         else if(currp1_str == u8"depend") { ::uwvm2::uwvm::io::depend_warning_fatal = true; }
+#if defined(_WIN32) && !defined(_WIN32_WINDOWS)
+        else if(currp1_str == u8"nt-path") { ::uwvm2::uwvm::io::nt_path_warning_fatal = true; }
+#endif
         else
         {
             ::fast_io::io::perr(::uwvm2::uwvm::io::u8log_output,

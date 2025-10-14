@@ -97,12 +97,18 @@ namespace uwvm2::uwvm::cmdline::params::details
             ::uwvm2::uwvm::io::show_untrusted_dl_warning = false;
             ::uwvm2::uwvm::io::show_dl_warning = false;
             ::uwvm2::uwvm::io::show_depend_warning = false;
+#if defined(_WIN32) && !defined(_WIN32_WINDOWS)
+            ::uwvm2::uwvm::io::show_nt_path_warning = false;
+#endif
         }
         else if(currp1_str == u8"vm") { ::uwvm2::uwvm::io::show_vm_warning = false; }
         else if(currp1_str == u8"parser") { ::uwvm2::uwvm::io::show_parser_warning = false; }
         else if(currp1_str == u8"untrusted-dl") { ::uwvm2::uwvm::io::show_untrusted_dl_warning = false; }
         else if(currp1_str == u8"dl") { ::uwvm2::uwvm::io::show_dl_warning = false; }
         else if(currp1_str == u8"depend") { ::uwvm2::uwvm::io::show_depend_warning = false; }
+#if defined(_WIN32) && !defined(_WIN32_WINDOWS)
+        else if(currp1_str == u8"nt-path") { ::uwvm2::uwvm::io::show_nt_path_warning = false; }
+#endif
         else
         {
             ::fast_io::io::perr(::uwvm2::uwvm::io::u8log_output,

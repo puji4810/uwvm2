@@ -40,6 +40,9 @@ UWVM_MODULE_EXPORT namespace uwvm2::uwvm::io
     inline bool show_untrusted_dl_warning{true};  // [global]
     inline bool show_dl_warning{true};            // [global]
     inline bool show_depend_warning{true};        // [global]
+# if defined(_WIN32) && !defined(_WIN32_WINDOWS)
+    inline bool show_nt_path_warning{true};  // [global]
+# endif
 
     /// @brief wtrap control
     inline bool vm_warning_fatal{};            // [global]
@@ -47,6 +50,9 @@ UWVM_MODULE_EXPORT namespace uwvm2::uwvm::io
     inline bool untrusted_dl_warning_fatal{};  // [global]
     inline bool dl_warning_fatal{};            // [global]
     inline bool depend_warning_fatal{};        // [global]
+# if defined(_WIN32) && !defined(_WIN32_WINDOWS)
+    inline bool nt_path_warning_fatal{};  // [global]
+# endif
 
 }  // namespace uwvm2::uwvm::io
 #endif

@@ -58,7 +58,12 @@ UWVM_MODULE_EXPORT namespace uwvm2::uwvm::cmdline::params
     inline constexpr ::uwvm2::utils::cmdline::parameter log_disable_warning{
         .name{u8"--log-disable-warning"},
         .describe{u8"Turn off the warning output of the uwvm."},
-        .usage{u8"[all|vm|parser|untrusted-dl|dl|depend]"},
+        .usage{u8"[all|vm|parser|untrusted-dl|dl|depend"
+#if defined(_WIN32) && !defined(_WIN32_WINDOWS)
+            u8"|nt-path"
+#endif
+            u8"]"
+        },
         .alias{::uwvm2::utils::cmdline::kns_u8_str_scatter_t{::std::addressof(details::log_disable_warning_alias), 1uz}},
         .handle{::std::addressof(details::log_disable_warning_callback)},
         .cate{::uwvm2::utils::cmdline::categorization::log}};
