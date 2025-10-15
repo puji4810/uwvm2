@@ -125,6 +125,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::environment
         ::uwvm2::imported::wasi::wasip1::fd_manager::wasm_fd_storage_t fd_storage{};  // [singleton]
 
         /// @note  After preloading, the directory in `mount_dir_root_t` becomes invalid. Because its contents were moved to the file manager.
+        ///        Each use will clear it.
         ::uwvm2::utils::container::vector<mount_dir_root_t> mount_dir_roots{};
 
         bool trace_wasip1_call{};
