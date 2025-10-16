@@ -36,11 +36,6 @@ module;
 #include <uwvm2/uwvm_predefine/utils/ansies/uwvm_color_push_macro.h>
 #include <uwvm2/utils/macro/push_macros.h>
 // platform
-#if !UWVM_HAS_BUILTIN(__builtin_alloca) && (defined(_WIN32) && !defined(__WINE__) && !defined(__BIONIC__) && !defined(__CYGWIN__))
-# include <malloc.h>
-#elif !UWVM_HAS_BUILTIN(__builtin_alloca)
-# include <alloca.h>
-#endif
 #if !defined(_WIN32)
 # include <errno.h>
 # include <unistd.h>
