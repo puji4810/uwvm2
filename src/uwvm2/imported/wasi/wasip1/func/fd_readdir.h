@@ -34,6 +34,7 @@
 # include <bit>
 # include <memory>
 # include <type_traits>
+# include <atomic>
 // macro
 # include <uwvm2/uwvm_predefine/utils/ansies/uwvm_color_push_macro.h>
 # include <uwvm2/utils/macro/push_macros.h>
@@ -54,6 +55,7 @@
 # include <uwvm2/uwvm_predefine/io/impl.h>
 # include <uwvm2/utils/mutex/impl.h>
 # include <uwvm2/utils/debug/impl.h>
+# include <uwvm2/utils/container/impl.h>
 # include <uwvm2/object/memory/linear/impl.h>
 # include <uwvm2/imported/wasi/wasip1/abi/impl.h>
 # include <uwvm2/imported/wasi/wasip1/fd_manager/impl.h>
@@ -73,6 +75,24 @@
 
 UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 {
+    struct alignas(8uz) wasi_dirent_t
+    {
+        ::uwvm2::imported::wasi::wasip1::abi::dircookie_t d_next;
+        ::uwvm2::imported::wasi::wasip1::abi::inode_t d_ino;
+        ::uwvm2::imported::wasi::wasip1::abi::dirnamlen_t d_namlen;
+        ::uwvm2::imported::wasi::wasip1::abi::filetype_t d_type;
+    };
+
+    inline constexpr ::std::size_t size_of_wasi_dirent_t{24uz};
+
+    inline consteval bool is_default_wasi_dirent_data_layout() noexcept
+    {
+        // In standard layout mode, data can be transferred in a single memcpy operation (static length), improving read efficiency.
+        return __builtin_offsetof(wasi_dirent_t, d_next) == 0uz && __builtin_offsetof(wasi_dirent_t, d_ino) == 8uz &&
+               __builtin_offsetof(wasi_dirent_t, d_namlen) == 16uz && __builtin_offsetof(wasi_dirent_t, d_type) == 20uz &&
+               sizeof(wasi_dirent_t) == size_of_wasi_dirent_t && alignof(wasi_dirent_t) == 8uz && ::std::endian::native == ::std::endian::little;
+    }
+
     /// @brief     WasiPreview1.fd_readdir
     /// @details   __wasi_errno_t __wasi_fd_readdir(__wasi_fd fd, void *buf, __wasi_size_t buf_len, __wasi_dircookie cookie, __wasi_size_t *buf_used);
     ::uwvm2::imported::wasi::wasip1::abi::errno_t fd_readdir(
@@ -236,6 +256,12 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         auto const underlying_dircookie{static_cast<underlying_dircookie_t>(cookie)};
         underlying_dircookie_t dircookie_counter{};
 
+        ::uwvm2::imported::wasi::wasip1::abi::dircookie_t d_next{};
+        ::uwvm2::imported::wasi::wasip1::abi::inode_t d_ino{};
+        ::uwvm2::imported::wasi::wasip1::abi::dirnamlen_t d_namlen{};
+        ::uwvm2::imported::wasi::wasip1::abi::filetype_t d_type{};
+        ::uwvm2::utils::container::u8cstring_view d_filename{};
+
 #if defined(_WIN32) && !defined(__CYGWIN__)
         // win32
         switch(curr_fd.file_type)
@@ -247,20 +273,98 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 # if defined(_WIN32_WINDOWS)
             case ::uwvm2::imported::wasi::wasip1::fd_manager::win32_wasi_fd_typesize_t::dir:
             {
-                for(auto const& ent: current(at(::fast_io::posix_io_observer{curr_fd.dir_fd})))
+                for(auto const& ent: current(at(curr_fd.dir_fd)))
                 {
-                    auto const d_next{static_cast<::uwvm2::imported::wasi::wasip1::abi::dircookie_t>(dircookie_counter)};
+                    ::uwvm2::utils::container::u8cstring_view tmp_filename{u8filename(ent)};
+
+                    auto const u8res{::uwvm2::utils::utf::check_legal_utf8<::uwvm2::utils::utf::utf8_specification::utf8_rfc3629>(tmp_filename.cbegin(),
+                                                                                                                                  tmp_filename.cend())};
+                    if(u8res.err != ::uwvm2::utils::utf::utf_error_code::success) [[unlikely]]
+                    {
+                        // File names are expected to be valid UTF-8. However, the host filesystem might contain entries that are not valid UTF-8.
+                        // Implementations MAY replace invalid sequences with the Unicode replacement character (U+FFFD), or MAY omit such entries.
+                        continue;
+                    }
+
+                    auto const temp_next{static_cast<::uwvm2::imported::wasi::wasip1::abi::dircookie_t>(dircookie_counter)};
 
                     if(dircookie_counter++ < underlying_dircookie) [[likely]] { continue; }
 
-                    ::uwvm::vm::wasi::inode_t const d_ino{details::get_inode(ent)};
+                    d_next = temp_next;
+                    d_ino = static_cast<::uwvm2::imported::wasi::wasip1::abi::inode_t>(inode_ul64(ent));
+                    d_filename = tmp_filename;
+                    d_namlen = static_cast<::uwvm2::imported::wasi::wasip1::abi::dirnamlen_t>(tmp_filename.size());
 
-                    ::fast_io::u8cstring_view const fn{u8filename(ent)};
+                    switch(type(ent))
+                    {
+                        case ::fast_io::file_type::none:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
+                            break;
+                        }
+                        case ::fast_io::file_type::not_found:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
+                            break;
+                        }
+                        case ::fast_io::file_type::regular:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_regular_file;
+                            break;
+                        }
+                        case ::fast_io::file_type::directory:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_directory;
+                            break;
+                        }
+                        case ::fast_io::file_type::symlink:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_symbolic_link;
+                            break;
+                        }
+                        case ::fast_io::file_type::block:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_block_device;
+                            break;
+                        }
+                        case ::fast_io::file_type::character:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_character_device;
+                            break;
+                        }
+                        case ::fast_io::file_type::fifo:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
+                            break;
+                        }
+                        case ::fast_io::file_type::socket:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_socket_stream;
+                            break;
+                        }
+                        case ::fast_io::file_type::unknown:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
+                            break;
+                        }
+                        case ::fast_io::file_type::remote:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
+                            break;
+                        }
+                        [[unlikely]] default:
+                        {
+#  if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                            ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#  endif
 
-                    ::uwvm::vm::wasi::dirnamlen_t const d_namlen{static_cast<::uwvm::vm::wasi::dirnamlen_t>(fn.size())};
-
-                    ::uwvm::vm::wasi::filetype_t d_type{};
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
+                            break;
+                        }
+                    }
                 }
+
+                break;
             }
 # endif
             case ::uwvm2::imported::wasi::wasip1::fd_manager::win32_wasi_fd_typesize_t::file:
@@ -269,6 +373,96 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                 // Win9x distinguishes between directories and files; here it directly returns an error.
                 return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotdir;
 # else
+                for(auto const& ent: current(at(curr_fd.file_fd)))
+                {
+                    ::uwvm2::utils::container::u8cstring_view tmp_filename{u8filename(ent)};
+
+                    auto const u8res{::uwvm2::utils::utf::check_legal_utf8<::uwvm2::utils::utf::utf8_specification::utf8_rfc3629>(tmp_filename.cbegin(),
+                                                                                                                                  tmp_filename.cend())};
+                    if(u8res.err != ::uwvm2::utils::utf::utf_error_code::success) [[unlikely]]
+                    {
+                        // File names are expected to be valid UTF-8. However, the host filesystem might contain entries that are not valid UTF-8.
+                        // Implementations MAY replace invalid sequences with the Unicode replacement character (U+FFFD), or MAY omit such entries.
+                        continue;
+                    }
+
+                    auto const temp_next{static_cast<::uwvm2::imported::wasi::wasip1::abi::dircookie_t>(dircookie_counter)};
+
+                    if(dircookie_counter++ < underlying_dircookie) [[likely]] { continue; }
+
+                    d_next = temp_next;
+                    d_ino = static_cast<::uwvm2::imported::wasi::wasip1::abi::inode_t>(inode_ul64(ent));
+                    d_filename = tmp_filename;
+                    d_namlen = static_cast<::uwvm2::imported::wasi::wasip1::abi::dirnamlen_t>(tmp_filename.size());
+
+                    switch(type(ent))
+                    {
+                        case ::fast_io::file_type::none:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
+                            break;
+                        }
+                        case ::fast_io::file_type::not_found:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
+                            break;
+                        }
+                        case ::fast_io::file_type::regular:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_regular_file;
+                            break;
+                        }
+                        case ::fast_io::file_type::directory:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_directory;
+                            break;
+                        }
+                        case ::fast_io::file_type::symlink:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_symbolic_link;
+                            break;
+                        }
+                        case ::fast_io::file_type::block:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_block_device;
+                            break;
+                        }
+                        case ::fast_io::file_type::character:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_character_device;
+                            break;
+                        }
+                        case ::fast_io::file_type::fifo:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
+                            break;
+                        }
+                        case ::fast_io::file_type::socket:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_socket_stream;
+                            break;
+                        }
+                        case ::fast_io::file_type::unknown:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
+                            break;
+                        }
+                        case ::fast_io::file_type::remote:
+                        {
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
+                            break;
+                        }
+                        [[unlikely]] default:
+                        {
+#  if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                            ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#  endif
+
+                            d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
+                            break;
+                        }
+                    }
+                }
 
                 break;
 # endif
@@ -284,7 +478,112 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         }
 #else
         // posix
+
+        for(auto const& ent: current(at(curr_fd.file_fd)))
+        {
+            ::uwvm2::utils::container::u8cstring_view tmp_filename{u8filename(ent)};
+
+            auto const u8res{
+                ::uwvm2::utils::utf::check_legal_utf8<::uwvm2::utils::utf::utf8_specification::utf8_rfc3629>(tmp_filename.cbegin(), tmp_filename.cend())};
+            if(u8res.err != ::uwvm2::utils::utf::utf_error_code::success) [[unlikely]]
+            {
+                // File names are expected to be valid UTF-8. However, the host filesystem might contain entries that are not valid UTF-8.
+                // Implementations MAY replace invalid sequences with the Unicode replacement character (U+FFFD), or MAY omit such entries.
+                continue;
+            }
+
+            auto const temp_next{static_cast<::uwvm2::imported::wasi::wasip1::abi::dircookie_t>(dircookie_counter)};
+
+            if(dircookie_counter++ < underlying_dircookie) [[likely]] { continue; }
+
+            d_next = temp_next;
+            d_ino = static_cast<::uwvm2::imported::wasi::wasip1::abi::inode_t>(inode_ul64(ent));
+            d_filename = tmp_filename;
+            d_namlen = static_cast<::uwvm2::imported::wasi::wasip1::abi::dirnamlen_t>(tmp_filename.size());
+
+            switch(type(ent))
+            {
+                case ::fast_io::file_type::none:
+                {
+                    d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
+                    break;
+                }
+                case ::fast_io::file_type::not_found:
+                {
+                    d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
+                    break;
+                }
+                case ::fast_io::file_type::regular:
+                {
+                    d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_regular_file;
+                    break;
+                }
+                case ::fast_io::file_type::directory:
+                {
+                    d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_directory;
+                    break;
+                }
+                case ::fast_io::file_type::symlink:
+                {
+                    d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_symbolic_link;
+                    break;
+                }
+                case ::fast_io::file_type::block:
+                {
+                    d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_block_device;
+                    break;
+                }
+                case ::fast_io::file_type::character:
+                {
+                    d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_character_device;
+                    break;
+                }
+                case ::fast_io::file_type::fifo:
+                {
+                    d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
+                    break;
+                }
+                case ::fast_io::file_type::socket:
+                {
+                    d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_socket_stream;
+                    break;
+                }
+                case ::fast_io::file_type::unknown:
+                {
+                    d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
+                    break;
+                }
+                case ::fast_io::file_type::remote:
+                {
+                    d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
+                    break;
+                }
+                [[unlikely]] default:
+                {
+# if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                    ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+# endif
+
+                    d_type = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
+                    break;
+                }
+            }
+        }
 #endif
+
+        if(dircookie_counter < underlying_dircookie)
+        {
+            // An opaque value representing the location within the directory stream. The value 0 represents the start of the directory.
+
+            ::uwvm2::imported::wasi::wasip1::memory::store_basic_wasm_type_to_memory_wasm32(
+                memory,
+                buf_used,
+                static_cast<::uwvm2::imported::wasi::wasip1::abi::wasi_size_t>(0uz));
+
+            return ::uwvm2::imported::wasi::wasip1::abi::errno_t::esuccess;
+        }
+
+        return ::uwvm2::imported::wasi::wasip1::abi::errno_t::esuccess;
     }
 }  // namespace uwvm2::imported::wasi::wasip1::func
 
