@@ -63,6 +63,8 @@ export import :fd_pwrite_wasm64;
 export import :fd_pwrite;
 export import :fd_read_wasm64;
 export import :fd_read;
+export import :fd_readdir_wasm64;
+export import :fd_readdir;
 
 
 #ifndef UWVM_MODULE

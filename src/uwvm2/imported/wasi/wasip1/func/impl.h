@@ -63,5 +63,7 @@
 # include "fd_pwrite.h"
 # include "fd_read_wasm64.h"
 # include "fd_read.h"
+# include "fd_readdir_wasm64.h"
+# include "fd_readdir.h"
 
 #endif
