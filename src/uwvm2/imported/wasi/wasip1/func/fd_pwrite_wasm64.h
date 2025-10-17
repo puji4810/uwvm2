@@ -379,7 +379,20 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     try
 # endif
                     {
+# ifndef _WIN32_WINDOWS
+                        // The P-series functions in Windows synchronization mode differ from POSIX in that they perform in-place writes on Windows, shifting
+                        // the cursor backward after writing or reading to accommodate the added or removed bytes. However, since WASIs internally provide an FD
+                        // mutex, multiple system calls cannot result in non-atomic operations. Therefore, WASIs internally implement behavior consistent with
+                        // POSIX.
+
+                        auto const curr_pos{::fast_io::operations::io_stream_seek_bytes(curr_fd.file_fd, 0u, ::fast_io::seekdir::cur)};
+# endif
+
                         scatter_status = ::fast_io::operations::scatter_pwrite_some_bytes(curr_fd.file_fd, scatter_base, scatter_length, scatter_p_off);
+
+# ifndef _WIN32_WINDOWS
+                        ::fast_io::operations::io_stream_seek_bytes(curr_fd.file_fd, curr_pos, ::fast_io::seekdir::beg);
+# endif
                     }
 # ifdef UWVM_CPP_EXCEPTIONS
                     catch(::fast_io::error e)
