@@ -783,6 +783,9 @@ inline ::std::byte *win32_read_some_bytes_impl(void *__restrict handle, ::std::b
 inline ::std::byte *win32_ntw_pread_some_bytes_impl(void *__restrict handle, ::std::byte *first, ::std::byte *last,
 										  ::fast_io::intfpos_t off)
 {
+	// The difference between P-series functions in Windows synchronization mode and POSIX is that under Windows,
+	// the functions will advance the position by the number of bytes written or read after each write/read operation.
+
 	// The use of overlapped behavior is not supported in Windows 95.
 	::fast_io::win32::overlapped overlap{};
 	::fast_io::win32::details::win32_calculate_offset_impl(handle, overlap, off);
@@ -813,6 +816,9 @@ inline ::std::byte const *win32_write_some_bytes_impl(void *__restrict handle, :
 inline ::std::byte const *win32_ntw_pwrite_some_bytes_impl(void *__restrict handle, ::std::byte const *first,
 												 ::std::byte const *last, ::fast_io::intfpos_t off)
 {
+	// The difference between P-series functions in Windows synchronization mode and POSIX is that under Windows,
+	// the functions will advance the position by the number of bytes written or read after each write/read operation.
+
 	// The use of overlapped behavior is not supported in Windows 95.
 	::fast_io::win32::overlapped overlap{};
 	::fast_io::win32::details::win32_calculate_offset_impl(handle, overlap, off);
