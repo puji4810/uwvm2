@@ -82,7 +82,7 @@ int main()
     // Case 3: not preopened dir → enotdir
     {
         auto &fdx = *env.fd_storage.opens.index_unchecked(4uz).fd_p;
-        fdx.preloaded_dir = {};
+        fdx.preloaded_dir = ::uwvm2::utils::container::u8string{};
         constexpr wasi_void_ptr_wasm64_t buf{12288u};
         auto const ret = ::uwvm2::imported::wasi::wasip1::func::fd_prestat_dir_name_wasm64(env,
                                                                                            static_cast<wasi_posix_fd_wasm64_t>(4),

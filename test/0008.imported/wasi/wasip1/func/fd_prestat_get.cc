@@ -74,7 +74,7 @@ int main()
     // Case 2: not preopened dir → enotdir
     {
         auto &fdx = *env.fd_storage.opens.index_unchecked(4uz).fd_p;
-        fdx.preloaded_dir = {};
+        fdx.preloaded_dir = ::uwvm2::utils::container::u8string{};
         auto const ret = ::uwvm2::imported::wasi::wasip1::func::fd_prestat_get(env, static_cast<wasi_posix_fd_t>(4), static_cast<wasi_void_ptr_t>(2048u));
         if(ret != errno_t::enotdir) { ::fast_io::fast_terminate(); }
     }

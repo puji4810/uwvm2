@@ -1,6 +1,4 @@
-﻿Diagnostics:
-  UnusedIncludes: None
-Hover:
+﻿Hover:
   ShowAKA: Yes
 
 CompileFlags:
@@ -14,5 +12,3 @@ Diagnostics:
 
 Completion:
   AllScopes: true
-  Duplicated: true
-  IncludeInsertion: false
