@@ -833,7 +833,7 @@ inline nt_file_position_status nt_get_file_position_impl(void *__restrict handle
 			::fast_io::win32::nt::file_information_class::FilePositionInformation)};
 		if (status)
 		{
-			return {status};
+			return {.status = status, .file_position = 0u};
 		}
 		file_position += fps;
 	}
@@ -847,7 +847,7 @@ inline nt_file_position_status nt_get_file_position_impl(void *__restrict handle
 			::fast_io::win32::nt::file_information_class::FileStandardInformation)};
 		if (status)
 		{
-			return {status};
+			return {.status = status, .file_position = 0u};
 		}
 		file_position += fsi.end_of_file;
 	}
