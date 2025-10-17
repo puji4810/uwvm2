@@ -1378,7 +1378,7 @@ public:
 
 	inline explicit constexpr win32_9xa_dir_file(decltype(nullptr)) noexcept = delete;
 
-	inline explicit win32_9xa_dir_file(win32_9xa_fs_dirent fsdirent, [[maybe_unused]] open_mode om, [[maybe_unused]] perms pm = static_cast<perms>(436))
+	inline explicit win32_9xa_dir_file(win32_9xa_fs_dirent fsdirent, [[maybe_unused]] open_mode om = open_mode::directory, [[maybe_unused]] perms pm = static_cast<perms>(436))
 		: win32_9xa_dir_io_observer{
 			  ::fast_io::win32::details::win32_9xa_create_dir_file_at_fs_dirent_impl(
 				  fsdirent.handle, fsdirent.filename.c_str(), fsdirent.filename.size())}
@@ -1386,14 +1386,14 @@ public:
 	}
 
 	template <::fast_io::constructible_to_os_c_str T>
-	inline explicit win32_9xa_dir_file(T const &filename, [[maybe_unused]] open_mode om, [[maybe_unused]] perms pm = static_cast<perms>(436))
+	inline explicit win32_9xa_dir_file(T const &filename, [[maybe_unused]] open_mode om = open_mode::directory, [[maybe_unused]] perms pm = static_cast<perms>(436))
 		: win32_9xa_dir_io_observer{
 			  ::fast_io::win32::details::win32_9xa_create_dir_file_impl(filename)}
 	{
 	}
 
 	template <::fast_io::constructible_to_os_c_str T>
-	inline explicit win32_9xa_dir_file(win32_9xa_at_entry nate, T const &filename, [[maybe_unused]] open_mode om, [[maybe_unused]] perms pm = static_cast<perms>(436))
+	inline explicit win32_9xa_dir_file(win32_9xa_at_entry nate, T const &filename, [[maybe_unused]] open_mode om = open_mode::directory, [[maybe_unused]] perms pm = static_cast<perms>(436))
 		: win32_9xa_dir_io_observer{
 			  ::fast_io::win32::details::win32_9xa_create_dir_file_at_impl(nate.handle, filename)}
 	{

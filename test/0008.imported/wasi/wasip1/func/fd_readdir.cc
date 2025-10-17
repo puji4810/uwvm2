@@ -60,7 +60,12 @@ int main()
         auto &fde = *env.fd_storage.opens.index_unchecked(4uz).fd_p;
         fde.rights_base = static_cast<rights_t>(-1);
         fde.rights_inherit = static_cast<rights_t>(-1);
+#if defined(_WIN32) && defined(_WIN32_WINDOWS)
+        fde.file_type = ::uwvm2::imported::wasi::wasip1::fd_manager::win32_wasi_fd_typesize_t::dir;
+        fde.dir_fd = ::fast_io::win32_9xa_dir_file{u8"."};
+#else
         fde.file_fd = ::fast_io::native_file{u8".", ::fast_io::open_mode::in | ::fast_io::open_mode::directory};
+#endif
 
         constexpr wasi_void_ptr_t buf_ptr{4096u};
         constexpr wasi_void_ptr_t used_ptr{2048u};
