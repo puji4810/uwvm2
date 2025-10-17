@@ -50,7 +50,7 @@ int main()
 
     // Set fd=3 as preopened directory with name "/sandbox"
     auto &fde = *env.fd_storage.opens.index_unchecked(3uz).fd_p;
-    fde.preloaded_dir = ::uwvm2::utils::container::u8string_view{u8"/sandbox"};
+    fde.preloaded_dir = ::uwvm2::utils::container::u8string{u8"/sandbox"};
 
     // Case 1: success write of prestat
     {
