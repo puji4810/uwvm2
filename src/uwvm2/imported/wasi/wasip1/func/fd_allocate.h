@@ -43,6 +43,11 @@
 #  include <fcntl.h>
 #  include <sys/stat.h>
 # endif
+# if defined(__CYGWIN__)
+#  include <errno.h>
+#  include <fcntl.h>
+#  include <sys/stat.h>
+# endif
 # if (defined(__MIPS__) || defined(__mips__) || defined(_MIPS_ARCH))
 #  include <sgidefs.h>
 # endif
@@ -210,6 +215,42 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotcapable;
         }
 
+        if(curr_fd.wasi_fd.ptr == nullptr) [[unlikely]]
+        {
+// This will be checked at runtime.
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+            ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+            return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+        }
+
+        switch(curr_fd.wasi_fd.ptr->wasi_fd_storage.type)
+        {
+            [[likely]] case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file:
+            {
+                break;
+            }
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::dir:
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
+            }
+#if defined(_WIN32) && !defined(__CYGWIN__)
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::socket:
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
+            }
+#endif
+            [[unlikely]] default:
+            {
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+            }
+        }
+
+        [[maybe_unused]] auto& file_fd{curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.file_fd};
+
         using underlying_filesize_t = ::std::underlying_type_t<::uwvm2::imported::wasi::wasip1::abi::filesize_t>;
 
         // Trivial success when len == 0
@@ -218,7 +259,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 #if defined(__APPLE__) || defined(__DARWIN_C_LEVEL)
         // Darwin
 
-        auto const& curr_fd_native_file{curr_fd.file_fd};
+        auto const& curr_fd_native_file{file_fd};
         auto const curr_fd_native_handle{curr_fd_native_file.native_handle()};
 
         // Do NOT saturate: if the requested size exceeds API limits, report error per WASI semantics.
@@ -268,7 +309,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
                     case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
                     case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm;
-                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
+                    // The `dir` is managed as a separate virtual file system. If encountered here, it indicates a virtual machine issue.
+                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
                     case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
                     case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::edquot;
                     case ESPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
@@ -276,6 +318,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     case EOPNOTSUPP: [[fallthrough]];
 # endif
                     case ENOTSUP: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
+                    case EINTR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eintr;
                     default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
                 }
             }
@@ -286,7 +329,15 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         if(::uwvm2::imported::wasi::wasip1::func::posix::fstat(curr_fd_native_handle, ::std::addressof(st)) == -1) [[unlikely]]
         {
             // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here, “eio” is used instead.
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+            switch(errno)
+            {
+                case EINTR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eintr;
+# if defined(EOPNOTSUPP) && (!defined(ENOTSUP) || (ENOTSUP != EOPNOTSUPP))
+                case EOPNOTSUPP: [[fallthrough]];
+# endif
+                case ENOTSUP: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
+                default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+            }
         }
 
         if(st.st_size < newsize) [[unlikely]]
@@ -303,7 +354,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
                     case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
                     case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm;
-                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
+                    // The `dir` is managed as a separate virtual file system. If encountered here, it indicates a virtual machine issue.
+                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
                     case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
                     case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::edquot;
                     case ESPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
@@ -311,6 +363,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     case EOPNOTSUPP: [[fallthrough]];
 # endif
                     case ENOTSUP: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
+                    case EINTR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eintr;
                     default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
                 }
             }
@@ -318,24 +371,17 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 
         return ::uwvm2::imported::wasi::wasip1::abi::errno_t::esuccess;
 
-#elif defined(_WIN32) || defined(__CYGWIN__)
+#elif defined(_WIN32) && !defined(__CYGWIN__)
         // Windows
-# if !defined(__CYGWIN__) && !defined(__WINE__) && !defined(__BIONIC__) && defined(_WIN32_WINDOWS)
+# if !defined(__WINE__) && !defined(__BIONIC__) && defined(_WIN32_WINDOWS)
         // Windows 9x
         // Windows 9x does not support any type.
         return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enosys;
 # elif !defined(_WIN32_WINNT) || _WIN32_WINNT >= 0x600
         // NT Version >= 6.0 (Vista)
 
-#  if !defined(__CYGWIN__)
-        if(curr_fd.file_type == ::uwvm2::imported::wasi::wasip1::fd_manager::win32_wasi_fd_typesize_t::socket)
-        {
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
-        }
-#  endif
-
         // Windows path. We accept a C runtime descriptor. Convert to HANDLE.
-        auto const& curr_posix_file{curr_fd.file_fd};
+        auto const& curr_posix_file{file_fd};
         // Ensure that the handle obtained is for nt. If native is win32 or nt, there will be no overhead.
         auto const curr_nt_io_observer{static_cast<::fast_io::nt_io_observer>(curr_posix_file)};
         auto const curr_fd_nt_handle{curr_nt_io_observer.native_handle()};
@@ -379,7 +425,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                 case 0xC0000010u /*STATUS_INVALID_DEVICE_REQUEST*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
                 case 0xC0000022u /*STATUS_ACCESS_DENIED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
                 case 0xC0000185u /*STATUS_IO_DEVICE_ERROR*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-                case 0xC00000BAu /*STATUS_FILE_IS_A_DIRECTORY*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
+                // The `dir` is managed as a separate virtual file system. If encountered here, it indicates a virtual machine issue.
+                case 0xC00000BAu /*STATUS_FILE_IS_A_DIRECTORY*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
                 default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
             }
         }
@@ -387,21 +434,36 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         // Ensure that the logical block is reserved on the physical disk, but it does not necessarily modify the logical size of the file. Therefore, it is
         // necessary to ensure that the logical size of the file covers the entire area.
 
-#  ifdef UWVM_CPP_EXCEPTIONS
-        try
-#  endif
-        {
-            ::std::size_t const old_file_size{file_size(curr_nt_io_observer)};
-            if(old_file_size < allocation_size) [[unlikely]] { truncate(curr_nt_io_observer, static_cast<::std::uintmax_t>(allocation_size)); }
-        }
-#  ifdef UWVM_CPP_EXCEPTIONS
-        catch(::fast_io::error)
+        // Directly use ntapi to obtain the complete 64-bit file size.
+        ::fast_io::win32::nt::file_standard_information fsi;  // no initialize
+        ::fast_io::win32::nt::io_status_block block;          // no initialize
+
+        if(::fast_io::win32::nt::nt_query_information_file<zw>(curr_fd_nt_handle,
+                                                               ::std::addressof(block),
+                                                               ::std::addressof(fsi),
+                                                               static_cast<::std::uint_least32_t>(sizeof(::fast_io::win32::nt::file_standard_information)),
+                                                               ::fast_io::win32::nt::file_information_class::FileStandardInformation)) [[unlikely]]
         {
             // This may be an unsupported system call or an ID not recognized by the system call. In this case, it is uniformly treated as an unsupported
             // ID.
             return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
         }
+
+        if(fsi.end_of_file < allocation_size) [[unlikely]]
+        {
+#  ifdef UWVM_CPP_EXCEPTIONS
+            try
 #  endif
+            {
+                truncate(curr_nt_io_observer, static_cast<::std::uintmax_t>(allocation_size));
+            }
+#  ifdef UWVM_CPP_EXCEPTIONS
+            catch(::fast_io::error e)
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+            }
+#  endif
+        }
 
         return ::uwvm2::imported::wasi::wasip1::abi::errno_t::esuccess;
 
@@ -409,10 +471,60 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         // NT Version < 6.0
         return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enosys;
 # endif
+
+#elif defined(__CYGWIN__)
+        // Cygwin (POSIX path)
+        auto const& curr_fd_native_file{file_fd};
+        auto const curr_fd_native_handle{curr_fd_native_file.native_handle()};
+
+        if constexpr(::std::numeric_limits<underlying_filesize_t>::max() > ::std::numeric_limits<::off_t>::max())
+        {
+            if(static_cast<underlying_filesize_t>(offset) > ::std::numeric_limits<::off_t>::max()) [[unlikely]]
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::efbig;
+            }
+
+            if(static_cast<underlying_filesize_t>(len) > ::std::numeric_limits<::off_t>::max()) [[unlikely]]
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::efbig;
+            }
+        }
+
+        ::off_t fallocate_offset{static_cast<::off_t>(offset)};
+        ::off_t fallocate_len{static_cast<::off_t>(len)};
+
+        int result_pf{::posix_fallocate(curr_fd_native_handle, fallocate_offset, fallocate_len)};
+        if(result_pf != 0) [[unlikely]]
+        {
+            switch(result_pf)
+            {
+                // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here, “eio” is used instead.
+                case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                case ENOSPC: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enospc;
+                case EFBIG: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::efbig;
+                case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
+                case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
+                case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm;
+                // The `dir` is managed as a separate virtual file system. If encountered here, it indicates a virtual machine issue.
+                case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
+                case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::edquot;
+                case ESPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
+# if defined(EOPNOTSUPP) && (!defined(ENOTSUP) || (ENOTSUP != EOPNOTSUPP))
+                case EOPNOTSUPP: [[fallthrough]];
+# endif
+                case ENOTSUP: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
+                case EINTR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eintr;
+                default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+            }
+        }
+
+        return ::uwvm2::imported::wasi::wasip1::abi::errno_t::esuccess;
+
 #elif (!defined(__NEWLIB__) || defined(__CYGWIN__)) && !(defined(__MSDOS__) || defined(__DJGPP__)) && !(defined(_WIN32) || defined(__CYGWIN__)) &&             \
     __has_include(<dirent.h>) && !defined(_PICOLIBC__)
         // Prefer posix_fallocate (portable) -- it returns 0 on success or an errno value on failure.
-        auto const& curr_fd_native_file{curr_fd.file_fd};
+        auto const& curr_fd_native_file{file_fd};
         auto const curr_fd_native_handle{curr_fd_native_file.native_handle()};
 
         // posix_fallocate signature: int posix_fallocate(int fd, ::off_t offset, ::off_t len);
@@ -451,7 +563,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
                     case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
                     case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm;
-                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
+                    // The `dir` is managed as a separate virtual file system. If encountered here, it indicates a virtual machine issue.
+                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
                     case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
                     case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::edquot;
                     case ESPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
@@ -459,6 +572,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     case EOPNOTSUPP: [[fallthrough]];
 #  endif
                     case ENOTSUP: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
+                    case EINTR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eintr;
                     default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
                 }
             }
@@ -501,7 +615,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
                     case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
                     case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm;
-                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
+                    // The `dir` is managed as a separate virtual file system. If encountered here, it indicates a virtual machine issue.
+                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
                     case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
                     case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::edquot;
                     case ESPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
@@ -509,6 +624,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     case EOPNOTSUPP: [[fallthrough]];
 #   endif
                     case ENOTSUP: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
+                    case EINTR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eintr;
                     default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
                 }
             }
@@ -571,7 +687,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
                     case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
                     case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm;
-                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
+                    // The `dir` is managed as a separate virtual file system. If encountered here, it indicates a virtual machine issue.
+                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
                     case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
                     case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::edquot;
                     case ESPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
@@ -579,6 +696,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     case EOPNOTSUPP: [[fallthrough]];
 #   endif
                     case ENOTSUP: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
+                    case EINTR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eintr;
                     default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
                 }
             }
@@ -616,7 +734,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
                     case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
                     case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm;
-                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
+                    // The `dir` is managed as a separate virtual file system. If encountered here, it indicates a virtual machine issue.
+                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
                     case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
                     case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::edquot;
                     case ESPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
@@ -624,6 +743,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     case EOPNOTSUPP: [[fallthrough]];
 #  endif
                     case ENOTSUP: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
+                    case EINTR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eintr;
                     default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
                 }
             }
@@ -660,7 +780,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                 case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
                 case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
                 case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm;
-                case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
+                // The `dir` is managed as a separate virtual file system. If encountered here, it indicates a virtual machine issue.
+                case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
                 case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
                 case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::edquot;
                 case ESPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
@@ -668,6 +789,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                 case EOPNOTSUPP: [[fallthrough]];
 #  endif
                 case ENOTSUP: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
+                case EINTR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eintr;
                 default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
             }
         }

@@ -56,6 +56,9 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
     ///       file or path, thereby removing its binding to the root. Consequently, subsequent attempts to open the directory cannot be performed using the
     ///       system's . (current path) and .. (parent directory) to access the directory, which could cause out-of-bounds issues. Therefore, the handle of the
     ///       already-opened directory file descriptor must be deeply bound internally to ensure safe reading.
+    ///
+    ///       On POSIX systems, as long as a file remains open via a directory file descriptor, you can continue performing any operations on that directory
+    ///       even if it has been renamed within the filesystem path.
     /// @note Since the handle in the Win9x directory system is not stored, fast_io stores the filename. This may cause TOCTOU and sandbox escape issues, but
     ///       it's merely a compromise for such ancient platforms.
     struct dir_stack_entry_t
