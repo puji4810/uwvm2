@@ -211,9 +211,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 // This will be checked at runtime.
 #if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
             ::uwvm2::utils::debug::trap_and_inform_bug_pos();
-#else
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
 #endif
+            return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
         }
 
         if(curr_fd.wasi_fd.ptr->wasi_fd_storage.type != ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file) [[unlikely]]
