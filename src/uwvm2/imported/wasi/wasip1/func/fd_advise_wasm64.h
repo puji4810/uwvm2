@@ -206,9 +206,27 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotcapable;
         }
 
+        if(curr_fd.wasi_fd.ptr == nullptr) [[unlikely]]
+        {
+// This will be checked at runtime.
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+            ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#else
+            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+#endif
+        }
+
+        if(curr_fd.wasi_fd.ptr->wasi_fd_storage.type != ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file) [[unlikely]]
+        {
+            // Under the wasi semantics, advise returns the correct value for any valid fd.
+            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess;
+        }
+
+        [[maybe_unused]] auto& file_fd{curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.file_fd};
+
 #if defined(__APPLE__) || defined(__DARWIN_C_LEVEL)
 
-        auto const curr_fd_native_handle{curr_fd.file_fd.native_handle()};
+        auto const curr_fd_native_handle{file_fd.native_handle()};
 
         switch(advice)
         {
@@ -322,7 +340,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         }
 
         // If the file descriptor only requires a single operation that does not need locking, the operating system provides its own built-in lock mechanism.
-        auto const curr_fd_native_handle{curr_fd.file_fd.native_handle()};
+        auto const curr_fd_native_handle{file_fd.native_handle()};
 
         using underlying_filesize_t = ::std::underlying_type_t<::uwvm2::imported::wasi::wasip1::abi::filesize_wasm64_t>;
 
@@ -377,7 +395,52 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         else if constexpr(sizeof(::std::size_t) >= sizeof(::std::uint32_t))
         {
             // 32bits platform
-#  if defined(__NR_fadvise64_64)
+#  if (defined(__arm__) || defined(_M_ARM)) && defined(__NR_arm_fadvise64_64)
+            if constexpr(::std::numeric_limits<underlying_filesize_t>::max() > ::std::numeric_limits<::std::uint64_t>::max())
+            {
+                if(static_cast<underlying_filesize_t>(offset) > ::std::numeric_limits<::std::uint64_t>::max()) [[unlikely]]
+                {
+                    // Ensure no incorrect positions are suggested while preserving the wasi semantics (this is a suggestion).
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess;
+                }
+
+                if(static_cast<underlying_filesize_t>(len) > ::std::numeric_limits<::std::uint64_t>::max()) [[unlikely]]
+                {
+                    // Ensure no incorrect positions are suggested while preserving the wasi semantics (this is a suggestion).
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess;
+                }
+            }
+
+            ::std::uint64_t offset_saturation{static_cast<::std::uint64_t>(offset)};
+            ::std::uint32_t offset_saturation_low{static_cast<::std::uint32_t>(offset_saturation)};
+            ::std::uint32_t offset_saturation_high{static_cast<::std::uint32_t>(offset_saturation >> 32u)};
+
+            ::std::uint64_t len_saturation{static_cast<::std::uint64_t>(len)};
+            ::std::uint32_t len_saturation_low{static_cast<::std::uint32_t>(len_saturation)};
+            ::std::uint32_t len_saturation_high{static_cast<::std::uint32_t>(len_saturation >> 32u)};
+
+            if constexpr(::std::endian::native == ::std::endian::big)
+            {
+                /* 6 args: fd, advice, offset (high, low), len (high, low) */
+                ::fast_io::system_call<__NR_arm_fadvise64_64, int>(curr_fd_native_handle,
+                                                                   curr_platform_advice,
+                                                                   offset_saturation_high,
+                                                                   offset_saturation_low,
+                                                                   len_saturation_high,
+                                                                   len_saturation_low);
+            }
+            else
+            {
+                /* 6 args: fd, advice, offset (low, high), len (low, high) */
+                ::fast_io::system_call<__NR_arm_fadvise64_64, int>(curr_fd_native_handle,
+                                                                   curr_platform_advice,
+                                                                   offset_saturation_low,
+                                                                   offset_saturation_high,
+                                                                   len_saturation_low,
+                                                                   len_saturation_high);
+            }
+            
+#  elif defined(__NR_fadvise64_64)
             if constexpr(::std::numeric_limits<underlying_filesize_t>::max() > ::std::numeric_limits<::std::uint64_t>::max())
             {
                 if(static_cast<underlying_filesize_t>(offset) > ::std::numeric_limits<::std::uint64_t>::max()) [[unlikely]]
@@ -441,7 +504,6 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                                                curr_platform_advice);
 #   endif
             }
-
 #  elif defined(__NR_fadvise64)
             if constexpr(::std::numeric_limits<underlying_filesize_t>::max() > ::std::numeric_limits<::std::uint64_t>::max())
             {
