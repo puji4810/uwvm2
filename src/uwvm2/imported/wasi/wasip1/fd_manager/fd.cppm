@@ -29,6 +29,9 @@ module;
 #include <type_traits>
 #include <memory>
 #include <new>
+#include <atomic>
+#include <utility>
+#include <algorithm>
 // macro
 #include <uwvm2/utils/macro/push_macros.h>
 
@@ -37,6 +40,7 @@ export module uwvm2.imported.wasi.wasip1.fd_manager:fd;
 import fast_io;
 import uwvm2.utils.mutex;
 import uwvm2.utils.container;
+import uwvm2.utils.debug;
 import uwvm2.parser.wasm.standard.wasm1.type;
 import uwvm2.imported.wasi.wasip1.abi;
 

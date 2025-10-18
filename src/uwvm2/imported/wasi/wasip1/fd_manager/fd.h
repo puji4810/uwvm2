@@ -30,12 +30,17 @@
 # include <type_traits>
 # include <memory>
 # include <new>
+# include <atomic>
+# include <utility>
+# include <algorithm>
 // macro
 # include <uwvm2/utils/macro/push_macros.h>
 // import
 # include <fast_io.h>
+# include <fast_io_device.h>
 # include <uwvm2/utils/container/impl.h>
 # include <uwvm2/utils/mutex/impl.h>
+# include <uwvm2/utils/debug/impl.h>
 # include <uwvm2/parser/wasm/standard/wasm1/type/impl.h>
 # include <uwvm2/imported/wasi/wasip1/abi/impl.h>
 #endif
@@ -44,25 +49,497 @@
 # define UWVM_MODULE_EXPORT
 #endif
 
-/*NONEXPORT*/ namespace uwvm2::imported::wasi::wasip1::environment
-{
-    struct mount_dir_root_t;
-}
-
 UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
 {
-#if defined(_WIN32)
-    // on WinNt: Files and paths are both managed under handle management, while sockets are managed by ws3.
-    // on Win9x: Files are managed by handles, paths are managed as strings, and sockets are managed by ws3.
-    enum class win32_wasi_fd_typesize_t : unsigned
+    /// @brief Preload elements into the directory stack
+    /// @note On the Win32 platform, when ::fast_io::open_mode::shared_delete is enabled, any process (including the current one) can rename an already opened
+    ///       file or path, thereby removing its binding to the root. Consequently, subsequent attempts to open the directory cannot be performed using the
+    ///       system's . (current path) and .. (parent directory) to access the directory, which could cause out-of-bounds issues. Therefore, the handle of the
+    ///       already-opened directory file descriptor must be deeply bound internally to ensure safe reading.
+    /// @note Since the handle in the Win9x directory system is not stored, fast_io stores the filename. This may cause TOCTOU and sandbox escape issues, but
+    ///       it's merely a compromise for such ancient platforms.
+    struct dir_stack_entry_t
+    {
+        // For the stack low, it is the full WASTI path name of the preload directory.
+        // For the upward path, it is the name of each level of the directory.
+        ::uwvm2::utils::container::u8string name{};
+        ::fast_io::dir_file file{};
+    };
+
+    /// @brief Shared body of the preloaded directory stack with atomic reference count
+    struct dir_stack_entry_rc_t
+    {
+        ::std::atomic_size_t refcount{};
+        dir_stack_entry_t dir_stack{};
+    };
+
+    /// @brief Reference wrapper of the preloaded directory stack (RC)
+    struct dir_stack_entry_ref_t
+    {
+        using allocator_t = ::fast_io::native_typed_global_allocator<dir_stack_entry_rc_t>;
+
+        dir_stack_entry_rc_t* ptr{};
+
+        inline constexpr dir_stack_entry_ref_t() noexcept
+        {
+            this->ptr = allocator_t::allocate(1uz);
+            // ptr will never be null because the fast_io allocator terminates upon allocation failure.
+            ::new(this->ptr) dir_stack_entry_rc_t{};
+            this->ptr->refcount.store(1uz, ::std::memory_order_relaxed);
+        }
+
+        inline constexpr dir_stack_entry_ref_t(dir_stack_entry_ref_t const& other) noexcept : ptr{other.ptr}
+        {
+            if(this->ptr) [[likely]] { this->ptr->refcount.fetch_add(1uz, ::std::memory_order_relaxed); }
+        }
+
+        inline constexpr dir_stack_entry_ref_t(dir_stack_entry_ref_t&& other) noexcept : ptr{other.ptr} { other.ptr = nullptr; }
+
+        inline constexpr dir_stack_entry_ref_t& operator= (dir_stack_entry_ref_t const& other) noexcept
+        {
+            if(::std::addressof(other) == this) [[unlikely]] { return *this; }
+            this->reset();
+            this->ptr = other.ptr;
+            if(this->ptr) [[likely]] { this->ptr->refcount.fetch_add(1uz, ::std::memory_order_relaxed); }
+            return *this;
+        }
+
+        inline constexpr dir_stack_entry_ref_t& operator= (dir_stack_entry_ref_t&& other) noexcept
+        {
+            if(::std::addressof(other) == this) [[unlikely]] { return *this; }
+            this->reset();
+            this->ptr = other.ptr;
+            other.ptr = nullptr;
+            return *this;
+        }
+
+        inline constexpr ~dir_stack_entry_ref_t()
+        {
+            if(this->ptr) [[likely]]
+            {
+                auto const p{this->ptr};
+                if(p->refcount.fetch_sub(1uz, ::std::memory_order_acq_rel) == 1uz)
+                {
+                    ::std::destroy_at(p);
+                    allocator_t::deallocate_n(p, 1uz);
+                }
+                // Do not set it to nullptr, as multiple calls to the destructor are undefined behavior.
+            }
+        }
+
+        inline constexpr void reset() noexcept
+        {
+            if(ptr) [[likely]]
+            {
+                auto const p{this->ptr};
+                this->ptr = nullptr;
+                if(p->refcount.fetch_sub(1uz, ::std::memory_order_acq_rel) == 1uz)
+                {
+                    ::std::destroy_at(p);
+                    allocator_t::deallocate_n(p, 1uz);
+                }
+            }
+        }
+    };
+
+    struct dir_stack_t
+    {
+        ::uwvm2::utils::container::vector<dir_stack_entry_ref_t> dir_stack{};
+
+        inline constexpr ::std::size_t stack_size() const noexcept { return this->dir_stack.size(); }
+
+        inline constexpr bool empty() const noexcept { return this->stack_size() == 0uz; }
+
+        inline constexpr bool is_preload_dir() const noexcept { return this->stack_size() == 1uz; }
+    };
+
+    enum class wasi_fd_type_e : unsigned
     {
         file,
-        socket,
-# if defined(_WIN32_WINDOWS)
         dir,
-# endif
-    };
+#if defined(_WIN32) && !defined(__CYGWIN__)
+        socket,
 #endif
+    };
+
+    template <typename... Ty>
+    inline consteval ::std::size_t get_union_size() noexcept
+    {
+        ::std::size_t max_size{};
+        [&max_size]<::std::size_t... I>(::std::index_sequence<I...>) constexpr noexcept
+        { ((max_size = ::std::max(max_size, sizeof(Ty...[I]))), ...); }(::std::make_index_sequence<sizeof...(Ty)>{});
+        return max_size;
+    }
+
+    struct wasi_fd_storage_t
+    {
+        inline static constexpr ::std::size_t sizeof_wasi_fd_storage_u{get_union_size<::fast_io::native_file,
+#if defined(_WIN32) && !defined(__CYGWIN__)
+                                                                                      ::fast_io::win32_socket_file,
+#endif
+                                                                                      dir_stack_entry_ref_t>()};
+
+        union storage_u UWVM_TRIVIALLY_RELOCATABLE_IF_ELIGIBLE
+        {
+            ::fast_io::native_file file_fd;
+#if defined(_WIN32) && !defined(__CYGWIN__)
+            ::fast_io::win32_socket_file socket_fd;
+#endif
+            dir_stack_entry_ref_t dir_stack;
+
+            // Full occupancy is used to initialize the union, set the union to all zero.
+            [[maybe_unused]] ::std::byte sizeof_wasi_fd_storage_u_reserve[sizeof_wasi_fd_storage_u]{};
+
+            // destructor of 'storage_u' is implicitly deleted because variant field 'typeidx_u8_vector' has a non-trivial destructor
+            inline constexpr ~storage_u() {}
+
+            // The release of table_idx is managed by struct wasm1_element_t, there is no issue of raii resources being unreleased.
+        } storage{};
+
+        static_assert(sizeof(storage_u) == sizeof_wasi_fd_storage_u, "sizeof(storage_t) not equal to sizeof_storage_u");
+
+        // In wasm1, type stands for table index, which conceptually can be any value, but since the standard specifies only 1 table, it can only be 0. Here
+        // union does not need to make any type-safe judgments since there is only one type.
+
+        wasi_fd_type_e type{};
+
+        inline explicit constexpr wasi_fd_storage_t() noexcept : type{wasi_fd_type_e::file}
+        {
+            // default to file
+            ::new(::std::addressof(this->storage.file_fd)) decltype(this->storage.file_fd){};
+        }
+
+        inline explicit constexpr wasi_fd_storage_t(wasi_fd_type_e new_type) noexcept : type{new_type}
+        {
+            switch(this->type)
+            {
+                case wasi_fd_type_e::file:
+                {
+                    ::new(::std::addressof(this->storage.file_fd)) decltype(this->storage.file_fd){};
+                    break;
+                }
+                case wasi_fd_type_e::dir:
+                {
+                    ::new(::std::addressof(this->storage.dir_stack)) decltype(this->storage.dir_stack){};
+                    break;
+                }
+#if defined(_WIN32) && !defined(__CYGWIN__)
+                case wasi_fd_type_e::socket:
+                {
+                    ::new(::std::addressof(this->storage.socket_fd)) decltype(this->storage.socket_fd){};
+                    break;
+                }
+#endif
+                [[unlikely]] default:
+                {
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                    ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                    ::fast_io::fast_terminate();
+                }
+            }
+        }
+
+        inline constexpr wasi_fd_storage_t(wasi_fd_storage_t const& other) noexcept : type{other.type}
+        {
+            switch(this->type)
+            {
+                case wasi_fd_type_e::file:
+                {
+                    ::new(::std::addressof(this->storage.file_fd)) decltype(this->storage.file_fd){other.storage.file_fd};
+                    break;
+                }
+                case wasi_fd_type_e::dir:
+                {
+                    ::new(::std::addressof(this->storage.dir_stack)) decltype(this->storage.dir_stack){other.storage.dir_stack};
+                    break;
+                }
+#if defined(_WIN32) && !defined(__CYGWIN__)
+                case wasi_fd_type_e::socket:
+                {
+                    ::new(::std::addressof(this->storage.socket_fd)) decltype(this->storage.socket_fd){other.storage.socket_fd};
+                    break;
+                }
+#endif
+                [[unlikely]] default:
+                {
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                    ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                    ::fast_io::fast_terminate();
+                }
+            }
+        }
+
+        inline constexpr wasi_fd_storage_t(wasi_fd_storage_t&& other) noexcept : type{other.type}
+        {
+            switch(this->type)
+            {
+                case wasi_fd_type_e::file:
+                {
+                    ::new(::std::addressof(this->storage.file_fd)) decltype(this->storage.file_fd){::std::move(other.storage.file_fd)};
+                    break;
+                }
+                case wasi_fd_type_e::dir:
+                {
+                    ::new(::std::addressof(this->storage.dir_stack)) decltype(this->storage.dir_stack){::std::move(other.storage.dir_stack)};
+                    break;
+                }
+#if defined(_WIN32) && !defined(__CYGWIN__)
+                case wasi_fd_type_e::socket:
+                {
+                    ::new(::std::addressof(this->storage.socket_fd)) decltype(this->storage.socket_fd){::std::move(other.storage.socket_fd)};
+                    break;
+                }
+#endif
+                [[unlikely]] default:
+                {
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                    ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                    ::fast_io::fast_terminate();
+                }
+            }
+        }
+
+        inline constexpr wasi_fd_storage_t& operator= (wasi_fd_storage_t const& other) noexcept
+        {
+            if(::std::addressof(other) == this) [[unlikely]] { return *this; }
+
+            switch(this->type)
+            {
+                case wasi_fd_type_e::file:
+                {
+                    ::std::destroy_at(::std::addressof(this->storage.file_fd));
+                    break;
+                }
+                case wasi_fd_type_e::dir:
+                {
+                    ::std::destroy_at(::std::addressof(this->storage.dir_stack));
+                    break;
+                }
+#if defined(_WIN32) && !defined(__CYGWIN__)
+                case wasi_fd_type_e::socket:
+                {
+                    ::std::destroy_at(::std::addressof(this->storage.socket_fd));
+                    break;
+                }
+#endif
+                [[unlikely]] default:
+                {
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                    ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                    ::fast_io::fast_terminate();
+                }
+            }
+
+            this->type = other.type;
+
+            switch(this->type)
+            {
+                case wasi_fd_type_e::file:
+                {
+                    ::new(::std::addressof(this->storage.file_fd)) decltype(this->storage.file_fd){other.storage.file_fd};
+                    break;
+                }
+                case wasi_fd_type_e::dir:
+                {
+                    ::new(::std::addressof(this->storage.dir_stack)) decltype(this->storage.dir_stack){other.storage.dir_stack};
+                    break;
+                }
+#if defined(_WIN32) && !defined(__CYGWIN__)
+                case wasi_fd_type_e::socket:
+                {
+                    ::new(::std::addressof(this->storage.socket_fd)) decltype(this->storage.socket_fd){other.storage.socket_fd};
+                    break;
+                }
+#endif
+                [[unlikely]] default:
+                {
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                    ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                    ::fast_io::fast_terminate();
+                }
+            }
+
+            return *this;
+        }
+
+        inline constexpr wasi_fd_storage_t& operator= (wasi_fd_storage_t&& other) noexcept
+        {
+            if(::std::addressof(other) == this) [[unlikely]] { return *this; }
+
+            switch(this->type)
+            {
+                case wasi_fd_type_e::file:
+                {
+                    ::std::destroy_at(::std::addressof(this->storage.file_fd));
+                    break;
+                }
+                case wasi_fd_type_e::dir:
+                {
+                    ::std::destroy_at(::std::addressof(this->storage.dir_stack));
+                    break;
+                }
+#if defined(_WIN32) && !defined(__CYGWIN__)
+                case wasi_fd_type_e::socket:
+                {
+                    ::std::destroy_at(::std::addressof(this->storage.socket_fd));
+                    break;
+                }
+#endif
+                [[unlikely]] default:
+                {
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                    ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                    ::fast_io::fast_terminate();
+                }
+            }
+
+            this->type = other.type;
+
+            switch(this->type)
+            {
+                case wasi_fd_type_e::file:
+                {
+                    ::new(::std::addressof(this->storage.file_fd)) decltype(this->storage.file_fd){::std::move(other.storage.file_fd)};
+                    break;
+                }
+                case wasi_fd_type_e::dir:
+                {
+                    ::new(::std::addressof(this->storage.dir_stack)) decltype(this->storage.dir_stack){::std::move(other.storage.dir_stack)};
+                    break;
+                }
+#if defined(_WIN32) && !defined(__CYGWIN__)
+                case wasi_fd_type_e::socket:
+                {
+                    ::new(::std::addressof(this->storage.socket_fd)) decltype(this->storage.socket_fd){::std::move(other.storage.socket_fd)};
+                    break;
+                }
+#endif
+                [[unlikely]] default:
+                {
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                    ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                    ::fast_io::fast_terminate();
+                }
+            }
+
+            return *this;
+        }
+
+        inline constexpr ~wasi_fd_storage_t()
+        {
+            switch(this->type)
+            {
+                case wasi_fd_type_e::file:
+                {
+                    ::std::destroy_at(::std::addressof(this->storage.file_fd));
+                    break;
+                }
+                case wasi_fd_type_e::dir:
+                {
+                    ::std::destroy_at(::std::addressof(this->storage.dir_stack));
+                    break;
+                }
+#if defined(_WIN32) && !defined(__CYGWIN__)
+                case wasi_fd_type_e::socket:
+                {
+                    ::std::destroy_at(::std::addressof(this->storage.socket_fd));
+                    break;
+                }
+#endif
+                [[unlikely]] default:
+                {
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                    ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                    ::fast_io::fast_terminate();
+                }
+            }
+
+            // multiple calls to the destructor are ub, no need to set it to nullptr here
+        }
+    };
+
+    /// @brief Provided for fd_renumber. For certain systems and file types, the system's dup function may not be usable.
+    struct wasi_fd_rc_t
+    {
+        ::std::atomic_size_t refcount{};
+        wasi_fd_storage_t wasi_fd_storage{};
+    };
+
+    struct wasi_fd_ref_t
+    {
+        using allocator_t = ::fast_io::native_typed_global_allocator<wasi_fd_rc_t>;
+
+        wasi_fd_rc_t* ptr{};
+
+        inline constexpr wasi_fd_ref_t() noexcept
+        {
+            this->ptr = allocator_t::allocate(1uz);
+            // ptr will never be null because the fast_io allocator terminates upon allocation failure.
+            ::new(this->ptr) wasi_fd_rc_t{};
+            this->ptr->refcount.store(1uz, ::std::memory_order_relaxed);
+        }
+
+        inline constexpr wasi_fd_ref_t(wasi_fd_ref_t const& other) noexcept : ptr{other.ptr}
+        {
+            if(this->ptr) [[likely]] { this->ptr->refcount.fetch_add(1uz, ::std::memory_order_relaxed); }
+        }
+
+        inline constexpr wasi_fd_ref_t(wasi_fd_ref_t&& other) noexcept : ptr{other.ptr} { other.ptr = nullptr; }
+
+        inline constexpr wasi_fd_ref_t& operator= (wasi_fd_ref_t const& other) noexcept
+        {
+            if(::std::addressof(other) == this) [[unlikely]] { return *this; }
+            this->reset();
+            this->ptr = other.ptr;
+            if(this->ptr) [[likely]] { this->ptr->refcount.fetch_add(1uz, ::std::memory_order_relaxed); }
+            return *this;
+        }
+
+        inline constexpr wasi_fd_ref_t& operator= (wasi_fd_ref_t&& other) noexcept
+        {
+            if(::std::addressof(other) == this) [[unlikely]] { return *this; }
+            this->reset();
+            this->ptr = other.ptr;
+            other.ptr = nullptr;
+            return *this;
+        }
+
+        inline constexpr ~wasi_fd_ref_t()
+        {
+            if(this->ptr) [[likely]]
+            {
+                auto const p{this->ptr};
+                if(p->refcount.fetch_sub(1uz, ::std::memory_order_acq_rel) == 1uz)
+                {
+                    ::std::destroy_at(p);
+                    allocator_t::deallocate_n(p, 1uz);
+                }
+                // Do not set it to nullptr, as multiple calls to the destructor are undefined behavior.
+            }
+        }
+
+        inline constexpr void reset() noexcept
+        {
+            if(ptr) [[likely]]
+            {
+                auto const p{this->ptr};
+                this->ptr = nullptr;
+                if(p->refcount.fetch_sub(1uz, ::std::memory_order_acq_rel) == 1uz)
+                {
+                    ::std::destroy_at(p);
+                    allocator_t::deallocate_n(p, 1uz);
+                }
+            }
+        }
+    };
 
     /// @brief    WASI file descriptor
     /// @details  Using a singleton ensures that when encountering multithreaded scaling during usage, the file descriptors currently in use remain unaffected.
@@ -74,21 +551,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
         // ====== for wasi ======
         // Wasi does not differentiate between text and binary modes, so on Win32 systems, files can be opened using CreateFile even if the Win32 layer does not
         // provide CRLF escaping.
-        ::fast_io::native_file file_fd{};
-
-#if defined(_WIN32) && !defined(__CYGWIN__)
-        /// @note The global win32_wsa_service must be created in advance.
-# if !(defined(UWVM_ALREADY_PROVIDED_WIN32_WSA_SERVICE) || defined(UWVM))
-        inline static ::fast_io::win32_wsa_service wasi_fd_win32_wsa_service{};  // [global]
-# endif
-        // Win32 sockets are independent of files, so socket functionality must be provided separately.
-        ::fast_io::win32_socket_file socket_fd{};
-# if defined(_WIN32_WINDOWS)
-        // The file system of Windows 9x is independent and requires string storage.
-        ::fast_io::win32_9xa_dir_file dir_fd{};
-# endif
-        win32_wasi_fd_typesize_t file_type{};
-#endif
+        wasi_fd_ref_t wasi_fd{};
 
         ::uwvm2::imported::wasi::wasip1::abi::rights_t rights_base{};
         ::uwvm2::imported::wasi::wasip1::abi::rights_t rights_inherit{};
@@ -98,8 +561,6 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
 
         // The "close pos" is only valid for those in the "close" list and invalid for those in the "renumber map".
         ::std::size_t close_pos{SIZE_MAX};
-
-        ::uwvm2::utils::container::u8string preloaded_dir{};
 
         inline constexpr wasi_fd_t() noexcept = default;
 
