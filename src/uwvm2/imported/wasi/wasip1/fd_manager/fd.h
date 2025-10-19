@@ -158,6 +158,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
 
     enum class wasi_fd_type_e : unsigned
     {
+        null,
         file,
         dir,
 #if defined(_WIN32) && !defined(__CYGWIN__)
@@ -180,7 +181,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
 #if defined(_WIN32) && !defined(__CYGWIN__)
                                                                                       ::fast_io::win32_socket_file,
 #endif
-                                                                                      dir_stack_entry_ref_t>()};
+                                                                                      dir_stack_t>()};
 
         union storage_u UWVM_TRIVIALLY_RELOCATABLE_IF_ELIGIBLE
         {
@@ -188,7 +189,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
 #if defined(_WIN32) && !defined(__CYGWIN__)
             ::fast_io::win32_socket_file socket_fd;
 #endif
-            dir_stack_entry_ref_t dir_stack;
+            dir_stack_t dir_stack;
 
             // Full occupancy is used to initialize the union, set the union to all zero.
             [[maybe_unused]] ::std::byte sizeof_wasi_fd_storage_u_reserve[sizeof_wasi_fd_storage_u]{};
@@ -206,16 +207,18 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
 
         wasi_fd_type_e type{};
 
-        inline explicit constexpr wasi_fd_storage_t() noexcept : type{wasi_fd_type_e::file}
+        inline explicit constexpr wasi_fd_storage_t() noexcept : type{wasi_fd_type_e::null}
         {
-            // default to file
-            ::new(::std::addressof(this->storage.file_fd)) decltype(this->storage.file_fd){};
         }
 
         inline explicit constexpr wasi_fd_storage_t(wasi_fd_type_e new_type) noexcept : type{new_type}
         {
             switch(this->type)
             {
+                case wasi_fd_type_e::null:
+                {
+                    break;
+                }
                 case wasi_fd_type_e::file:
                 {
                     ::new(::std::addressof(this->storage.file_fd)) decltype(this->storage.file_fd){};
@@ -247,6 +250,10 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
         {
             switch(this->type)
             {
+                case wasi_fd_type_e::null:
+                {
+                    break;
+                }
                 case wasi_fd_type_e::file:
                 {
                     ::new(::std::addressof(this->storage.file_fd)) decltype(this->storage.file_fd){other.storage.file_fd};
@@ -278,6 +285,10 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
         {
             switch(this->type)
             {
+                case wasi_fd_type_e::null:
+                {
+                    break;
+                }
                 case wasi_fd_type_e::file:
                 {
                     ::new(::std::addressof(this->storage.file_fd)) decltype(this->storage.file_fd){::std::move(other.storage.file_fd)};
@@ -311,6 +322,10 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
 
             switch(this->type)
             {
+                case wasi_fd_type_e::null:
+                {
+                    break;
+                }
                 case wasi_fd_type_e::file:
                 {
                     ::std::destroy_at(::std::addressof(this->storage.file_fd));
@@ -341,6 +356,10 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
 
             switch(this->type)
             {
+                case wasi_fd_type_e::null:
+                {
+                    break;
+                }
                 case wasi_fd_type_e::file:
                 {
                     ::new(::std::addressof(this->storage.file_fd)) decltype(this->storage.file_fd){other.storage.file_fd};
@@ -376,6 +395,10 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
 
             switch(this->type)
             {
+                case wasi_fd_type_e::null:
+                {
+                    break;
+                }
                 case wasi_fd_type_e::file:
                 {
                     ::std::destroy_at(::std::addressof(this->storage.file_fd));
@@ -406,6 +429,10 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
 
             switch(this->type)
             {
+                case wasi_fd_type_e::null:
+                {
+                    break;
+                }
                 case wasi_fd_type_e::file:
                 {
                     ::new(::std::addressof(this->storage.file_fd)) decltype(this->storage.file_fd){::std::move(other.storage.file_fd)};
@@ -439,6 +466,10 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
         {
             switch(this->type)
             {
+                case wasi_fd_type_e::null:
+                {
+                    break;
+                }
                 case wasi_fd_type_e::file:
                 {
                     ::std::destroy_at(::std::addressof(this->storage.file_fd));

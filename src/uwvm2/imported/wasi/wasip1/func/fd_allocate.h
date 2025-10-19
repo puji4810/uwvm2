@@ -226,6 +226,10 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 
         switch(curr_fd.wasi_fd.ptr->wasi_fd_storage.type)
         {
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::null:
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+            }
             [[likely]] case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file:
             {
                 break;
@@ -319,6 +323,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 # endif
                     case ENOTSUP: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
                     case EINTR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eintr;
+                    case ENODEV: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enodev;
+                    case ENXIO: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enxio;
                     default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
                 }
             }
