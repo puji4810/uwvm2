@@ -175,6 +175,14 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
         return max_size;
     }
 
+#if defined(_WIN32)
+    struct win32_native_file_with_flags_t
+    {
+        ::fast_io::native_file file_fd;
+        ::uwvm2::imported::wasi::wasip1::abi::fdflags_t fdflags;
+    };
+#endif
+
     struct wasi_fd_storage_t
     {
         inline static constexpr ::std::size_t sizeof_wasi_fd_storage_u{get_union_size<::fast_io::native_file,
@@ -185,11 +193,20 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
 
         union storage_u UWVM_TRIVIALLY_RELOCATABLE_IF_ELIGIBLE
         {
+            // native file (with flags)
+#if defined(_WIN32)
+            win32_native_file_with_flags_t file_fd_with_flags;
+#else
             ::fast_io::native_file file_fd;
+#endif
+
+            // dir stack
+            dir_stack_t dir_stack;
+
+            // win32 ws2 socket
 #if defined(_WIN32) && !defined(__CYGWIN__)
             ::fast_io::win32_socket_file socket_fd;
 #endif
-            dir_stack_t dir_stack;
 
             // Full occupancy is used to initialize the union, set the union to all zero.
             [[maybe_unused]] ::std::byte sizeof_wasi_fd_storage_u_reserve[sizeof_wasi_fd_storage_u]{};
