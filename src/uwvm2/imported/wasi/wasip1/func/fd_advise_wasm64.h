@@ -215,10 +215,35 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
         }
 
-        if(curr_fd.wasi_fd.ptr->wasi_fd_storage.type != ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file) [[unlikely]]
+        switch(curr_fd.wasi_fd.ptr->wasi_fd_storage.type)
         {
-            // Under the wasi semantics, advise returns the correct value for any valid fd.
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess;
+            [[unlikely]] case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::null:
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+            }
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file:
+            {
+                break;
+            }
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::dir:
+            {
+                // Under the wasi semantics, advise returns the correct value for any valid fd.
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess;
+            }
+#if defined(_WIN32) && !defined(__CYGWIN__)
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::socket:
+            {
+                // Under the wasi semantics, advise returns the correct value for any valid fd.
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess;
+            }
+#endif
+            [[unlikely]] default:
+            {
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+            }
         }
 
         [[maybe_unused]] auto& file_fd{curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.file_fd};
