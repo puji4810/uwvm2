@@ -313,8 +313,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
                     case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
                     case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm;
-                    // The `dir` is managed as a separate virtual file system. If encountered here, it indicates a virtual machine issue.
-                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
                     case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
                     case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::edquot;
                     case ESPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
@@ -360,8 +359,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
                     case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
                     case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm;
-                    // The `dir` is managed as a separate virtual file system. If encountered here, it indicates a virtual machine issue.
-                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
                     case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
                     case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::edquot;
                     case ESPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
@@ -431,8 +429,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                 case 0xC0000010u /*STATUS_INVALID_DEVICE_REQUEST*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
                 case 0xC0000022u /*STATUS_ACCESS_DENIED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
                 case 0xC0000185u /*STATUS_IO_DEVICE_ERROR*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-                // The `dir` is managed as a separate virtual file system. If encountered here, it indicates a virtual machine issue.
-                case 0xC00000BAu /*STATUS_FILE_IS_A_DIRECTORY*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                case 0xC00000BAu /*STATUS_FILE_IS_A_DIRECTORY*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
                 default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
             }
         }
@@ -511,8 +508,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                 case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
                 case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
                 case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm;
-                // The `dir` is managed as a separate virtual file system. If encountered here, it indicates a virtual machine issue.
-                case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
                 case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
                 case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::edquot;
                 case ESPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
@@ -569,8 +565,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
                     case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
                     case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm;
-                    // The `dir` is managed as a separate virtual file system. If encountered here, it indicates a virtual machine issue.
-                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
                     case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
                     case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::edquot;
                     case ESPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
@@ -621,8 +616,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
                     case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
                     case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm;
-                    // The `dir` is managed as a separate virtual file system. If encountered here, it indicates a virtual machine issue.
-                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
                     case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
                     case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::edquot;
                     case ESPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
@@ -693,8 +687,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
                     case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
                     case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm;
-                    // The `dir` is managed as a separate virtual file system. If encountered here, it indicates a virtual machine issue.
-                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
                     case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
                     case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::edquot;
                     case ESPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
@@ -740,8 +733,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
                     case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
                     case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm;
-                    // The `dir` is managed as a separate virtual file system. If encountered here, it indicates a virtual machine issue.
-                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
                     case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
                     case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::edquot;
                     case ESPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
@@ -786,8 +778,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                 case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
                 case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
                 case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm;
-                // The `dir` is managed as a separate virtual file system. If encountered here, it indicates a virtual machine issue.
-                case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
                 case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
                 case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::edquot;
                 case ESPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
