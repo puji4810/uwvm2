@@ -175,17 +175,26 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
         return max_size;
     }
 
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(__CYGWIN__)
     struct win32_native_file_with_flags_t
     {
-        ::fast_io::native_file file_fd;
-        ::uwvm2::imported::wasi::wasip1::abi::fdflags_t fdflags;
+        // Automatically select NT or Win32
+        ::fast_io::native_file file{};
+        // Since flags created in Win32 are fixed starting from the handle and cannot be modified, a flag must be created for storage.
+        ::uwvm2::imported::wasi::wasip1::abi::fdflags_t fdflags{};
     };
+#endif
+
+    using wasi_file_fd_t =
+#if defined(_WIN32) && !defined(__CYGWIN__)
+        win32_native_file_with_flags_t;
+#else
+        ::fast_io::native_file;
 #endif
 
     struct wasi_fd_storage_t
     {
-        inline static constexpr ::std::size_t sizeof_wasi_fd_storage_u{get_union_size<::fast_io::native_file,
+        inline static constexpr ::std::size_t sizeof_wasi_fd_storage_u{get_union_size<wasi_file_fd_t,
 #if defined(_WIN32) && !defined(__CYGWIN__)
                                                                                       ::fast_io::win32_socket_file,
 #endif
@@ -194,11 +203,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
         union storage_u UWVM_TRIVIALLY_RELOCATABLE_IF_ELIGIBLE
         {
             // native file (with flags)
-#if defined(_WIN32)
-            win32_native_file_with_flags_t file_fd_with_flags;
-#else
-            ::fast_io::native_file file_fd;
-#endif
+            wasi_file_fd_t file_fd;
 
             // dir stack
             dir_stack_t dir_stack;
@@ -646,7 +651,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
 
         inline constexpr void reset() noexcept
         {
-            if(ptr) [[likely]]
+            // Reset releases itself and decrements the reference count.
+            if(this->ptr) [[likely]]
             {
                 auto const p{this->ptr};
                 this->ptr = nullptr;
@@ -655,6 +661,17 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
                     ::std::destroy_at(p);
                     allocator_t::deallocate_n(p, 1uz);
                 }
+            }
+        }
+
+        inline constexpr void create_new() noexcept
+        {
+            if(!this->ptr) [[likely]]
+            {
+                this->ptr = allocator_t::allocate(1uz);
+                // ptr will never be null because the fast_io allocator terminates upon allocation failure.
+                ::new(this->ptr) wasi_fd_rc_t{};
+                this->ptr->refcount.store(1uz, ::std::memory_order_relaxed);
             }
         }
     };
@@ -678,6 +695,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
         mutex_t fd_mutex{};  // [singleton]
 
         // The "close pos" is only valid for those in the "close" list and invalid for those in the "renumber map".
+        // note: Since SIZE_MAX is used to mark closed files, the maximum number of available files is only SIZE_MAX - 1uz.
         ::std::size_t close_pos{SIZE_MAX};
 
         inline constexpr wasi_fd_t() noexcept = default;

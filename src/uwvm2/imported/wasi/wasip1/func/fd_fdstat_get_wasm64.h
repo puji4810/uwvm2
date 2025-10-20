@@ -1,4 +1,4 @@
-
+﻿
 /*************************************************************
  * Ultimate WebAssembly Virtual Machine (Version 2)          *
  * Copyright (c) 2025-present UlteSoft. All rights reserved. *
@@ -196,6 +196,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         ::uwvm2::imported::wasi::wasip1::abi::rights_wasm64_t fs_rights_base{curr_fd.rights_base};
         ::uwvm2::imported::wasi::wasip1::abi::rights_wasm64_t fs_rights_inheriting{curr_fd.rights_inherit};
 
+        // If ptr is null, it indicates an attempt to open a closed file. However, the preceding check for close pos already prevents such closed files from
+        // being processed, making this a virtual machine implementation error.
         if(curr_fd.wasi_fd.ptr == nullptr) [[unlikely]]
         {
 #if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
@@ -212,10 +214,23 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             }
             case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file:
             {
-                auto const& curr_fd_native_file{curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.file_fd};
+                auto& file_fd{
+#if defined(_WIN32) && !defined(__CYGWIN__)
+                    curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file
+#else
+                    curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
+#endif
+                };
+
+                auto const& curr_fd_native_file{file_fd};
+
                 [[maybe_unused]] auto const native_fd{curr_fd_native_file.native_handle()};
 
-#if (!defined(__NEWLIB__) || defined(__CYGWIN__)) && !defined(_WIN32) && __has_include(<dirent.h>) && !defined(_PICOLIBC__)
+#if defined(_WIN32) && !defined(__CYGWIN__)
+                // Flags created in Win32 are fixed starting from the handle and cannot be modified.
+                fs_flags = curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.fdflags;
+
+#elif (!defined(__NEWLIB__) || defined(__CYGWIN__)) && !defined(_WIN32) && __has_include(<dirent.h>) && !defined(_PICOLIBC__)
 # if defined(__linux__) && defined(__NR_fcntl)
                 int const oflags{::fast_io::system_call<__NR_fcntl, int>(native_fd, F_GETFL)};
 
@@ -320,7 +335,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     case ::fast_io::file_type::socket:
                     {
                         fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_wasm64_t::filetype_socket_stream;
-                        
+
 #if (!defined(__NEWLIB__) || defined(__CYGWIN__)) && !(defined(_WIN32) && !defined(__CYGWIN__)) &&                                                             \
     __has_include(<dirent.h>) && !defined(_PICOLIBC__) && !(defined(__MSDOS__) || defined(__DJGPP__))
                         int so_type{};

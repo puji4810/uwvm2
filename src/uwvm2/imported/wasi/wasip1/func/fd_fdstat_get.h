@@ -233,6 +233,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         ::uwvm2::imported::wasi::wasip1::abi::rights_t fs_rights_base{curr_fd.rights_base};           // 8
         ::uwvm2::imported::wasi::wasip1::abi::rights_t fs_rights_inheriting{curr_fd.rights_inherit};  // 16
 
+        // If ptr is null, it indicates an attempt to open a closed file. However, the preceding check for close pos already prevents such closed files from
+        // being processed, making this a virtual machine implementation error.
         if(curr_fd.wasi_fd.ptr == nullptr) [[unlikely]]
         {
 // This will be checked at runtime.
@@ -250,10 +252,23 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             }
             case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file:
             {
-                auto const& curr_fd_native_file{curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.file_fd};
+                auto& file_fd{
+#if defined(_WIN32) && !defined(__CYGWIN__)
+                    curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file
+#else
+                    curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
+#endif
+                };
+
+                auto const& curr_fd_native_file{file_fd};
+
                 [[maybe_unused]] auto const native_fd{curr_fd_native_file.native_handle()};
 
-#if (!defined(__NEWLIB__) || defined(__CYGWIN__)) && !defined(_WIN32) && __has_include(<dirent.h>) && !defined(_PICOLIBC__)
+#if defined(_WIN32) && !defined(__CYGWIN__)
+                // Flags created in Win32 are fixed starting from the handle and cannot be modified.
+                fs_flags = curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.fdflags;
+
+#elif (!defined(__NEWLIB__) || defined(__CYGWIN__)) && !defined(_WIN32) && __has_include(<dirent.h>) && !defined(_PICOLIBC__)
 # if defined(__linux__) && defined(__NR_fcntl)
                 int const oflags{::fast_io::system_call<__NR_fcntl, int>(native_fd, F_GETFL)};
 

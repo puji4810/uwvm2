@@ -187,6 +187,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotcapable;
         }
 
+        // If ptr is null, it indicates an attempt to open a closed file. However, the preceding check for close pos already prevents such closed files from
+        // being processed, making this a virtual machine implementation error.
         if(curr_fd.wasi_fd.ptr == nullptr) [[unlikely]]
         {
 // This will be checked at runtime.
@@ -213,7 +215,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 #if defined(_WIN32) && !defined(__CYGWIN__)
             case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::socket:
             {
-                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
             }
 #endif
             [[unlikely]] default:
@@ -225,7 +227,13 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             }
         }
 
-        [[maybe_unused]] auto& file_fd{curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.file_fd};
+        [[maybe_unused]] auto& file_fd{
+#if defined(_WIN32) && !defined(__CYGWIN__)
+            curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file
+#else
+            curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
+#endif
+        };
 
 #if defined(_WIN32) || defined(__CYGWIN__)
 

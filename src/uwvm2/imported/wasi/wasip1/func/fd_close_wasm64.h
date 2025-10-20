@@ -183,6 +183,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                 auto const new_close_pos{::std::addressof(wasm_fd_storage.closes.emplace_back(fd_opens_pos))};
 
                 // Add the position where it closes itself to facilitate subsequent renumbering.
+                // Since it is a vector, its internal iterators are contiguous, allowing direct access to adjacent elements.
                 curr_fd_p->close_pos = static_cast<::std::size_t>(new_close_pos - wasm_fd_storage.closes.cbegin());
             }
 
@@ -205,6 +206,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 
         // The "close" operation always succeeds. Even if an exception is thrown, it will be reset to the initial value.
 
+        // If ptr is null, it indicates an attempt to open a closed file. However, the preceding check for close pos already prevents such closed files from
+        // being processed, making this a virtual machine implementation error.
         if(curr_fd.wasi_fd.ptr == nullptr) [[unlikely]]
         {
 // This will be checked at runtime.
@@ -221,9 +224,9 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         // mistakenly believe the fd remains usable despite its actual unavailability. This creates a state inconsistency. It is neither exception-safe
         // (no fallback possible) nor prevents subsequent operations on the fd from failing. Therefore, no action is taken here.
 
-        // The `reset_type` function does not throw exceptions, and the destructor of `fast_io` also does not throw exceptions. It will not close due to a failed
-        // close operation.
-        curr_fd.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::null);
+        // The `reset_type` function does not throw exceptions, and the destructor of `fast_io` also does not throw exceptions. It will not close due to a
+        // failed close operation. Use `reset` directly. When creating from the vector of closed positions later, use `create_new`.
+        curr_fd.wasi_fd.reset();
 
         // After unlocking fds_lock, members within `wasm_fd_storage_t` can no longer be accessed or modified.
 
