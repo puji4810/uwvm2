@@ -423,6 +423,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         {
             switch(status)
             {
+                // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here, “eio” is used instead.
+                case 0xC0000008u /*STATUS_INVALID_HANDLE*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
                 case 0xC000007Fu /*STATUS_DISK_FULL*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enospc;
                 case 0xC0000904u /*STATUS_FILE_TOO_LARGE*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::efbig;
                 case 0xC000000Du /*STATUS_INVALID_PARAMETER*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
@@ -778,7 +780,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                 case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
                 case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eacces;
                 case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eperm;
-                case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eisidr;
+                case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eisdir;
                 case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::erofs;
                 case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::edquot;
                 case ESPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::espipe;
