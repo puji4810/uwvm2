@@ -187,21 +187,49 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotcapable;
         }
 
+        if(curr_fd.wasi_fd.ptr == nullptr) [[unlikely]]
+        {
+// This will be checked at runtime.
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+            ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+        }
+
+        switch(curr_fd.wasi_fd.ptr->wasi_fd_storage.type)
+        {
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::null:
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+            }
+            [[likely]] case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file:
+            {
+                break;
+            }
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::dir:
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eisdir;
+            }
+#if defined(_WIN32) && !defined(__CYGWIN__)
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::socket:
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::espipe;
+            }
+#endif
+            [[unlikely]] default:
+            {
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+            }
+        }
+
+        [[maybe_unused]] auto& file_fd{curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.file_fd};
+
 #if defined(_WIN32) || defined(__CYGWIN__)
 
-# if !defined(__CYGWIN__)
-        if(curr_fd.file_type == ::uwvm2::imported::wasi::wasip1::fd_manager::win32_wasi_fd_typesize_t::socket)
-        {
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
-        }
-#  if defined(_WIN32_WINDOWS)
-        else if(curr_fd.file_type == ::uwvm2::imported::wasi::wasip1::fd_manager::win32_wasi_fd_typesize_t::dir)
-        {
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eisdir;
-        }
-#  endif
-# endif
-        auto const& curr_fd_native_file{curr_fd.file_fd};
+        auto const& curr_fd_native_file{file_fd};
 
 # ifdef UWVM_CPP_EXCEPTIONS
         try
@@ -272,7 +300,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 
         // The Platform only supports fsync: MSDOS-DJGPP, hpux, OpenBSD
 
-        auto const& curr_fd_native_file{curr_fd.file_fd};
+        auto const& curr_fd_native_file{file_fd};
         auto const curr_fd_native_handle{curr_fd_native_file.native_handle()};
 
         auto const result_fsync{::uwvm2::imported::wasi::wasip1::func::posix::fsync(curr_fd_native_handle)};
@@ -316,7 +344,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         // linux, bsd series, darwin
         // use fdatasync
 
-        auto const& curr_fd_native_file{curr_fd.file_fd};
+        auto const& curr_fd_native_file{file_fd};
         auto const curr_fd_native_handle{curr_fd_native_file.native_handle()};
 
 # if defined(__linux__) && (defined(__NR_fdatasync) && defined(__NR_fsync))
