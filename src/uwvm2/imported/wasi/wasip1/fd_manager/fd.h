@@ -207,9 +207,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
 
         wasi_fd_type_e type{};
 
-        inline explicit constexpr wasi_fd_storage_t() noexcept : type{wasi_fd_type_e::null}
-        {
-        }
+        inline explicit constexpr wasi_fd_storage_t() noexcept : type{wasi_fd_type_e::null} {}
 
         inline explicit constexpr wasi_fd_storage_t(wasi_fd_type_e new_type) noexcept : type{new_type}
         {
@@ -497,6 +495,75 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
             }
 
             // multiple calls to the destructor are ub, no need to set it to nullptr here
+        }
+
+        inline constexpr void reset_type(wasi_fd_type_e new_type) noexcept
+        {
+            switch(this->type)
+            {
+                case wasi_fd_type_e::null:
+                {
+                    break;
+                }
+                case wasi_fd_type_e::file:
+                {
+                    ::std::destroy_at(::std::addressof(this->storage.file_fd));
+                    break;
+                }
+                case wasi_fd_type_e::dir:
+                {
+                    ::std::destroy_at(::std::addressof(this->storage.dir_stack));
+                    break;
+                }
+#if defined(_WIN32) && !defined(__CYGWIN__)
+                case wasi_fd_type_e::socket:
+                {
+                    ::std::destroy_at(::std::addressof(this->storage.socket_fd));
+                    break;
+                }
+#endif
+                [[unlikely]] default:
+                {
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                    ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                    ::fast_io::fast_terminate();
+                }
+            }
+
+            this->type = new_type;
+
+            switch(this->type)
+            {
+                case wasi_fd_type_e::null:
+                {
+                    break;
+                }
+                case wasi_fd_type_e::file:
+                {
+                    ::new(::std::addressof(this->storage.file_fd)) decltype(this->storage.file_fd){};
+                    break;
+                }
+                case wasi_fd_type_e::dir:
+                {
+                    ::new(::std::addressof(this->storage.dir_stack)) decltype(this->storage.dir_stack){};
+                    break;
+                }
+#if defined(_WIN32) && !defined(__CYGWIN__)
+                case wasi_fd_type_e::socket:
+                {
+                    ::new(::std::addressof(this->storage.socket_fd)) decltype(this->storage.socket_fd){};
+                    break;
+                }
+#endif
+                [[unlikely]] default:
+                {
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                    ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                    ::fast_io::fast_terminate();
+                }
+            }
         }
     };
 
