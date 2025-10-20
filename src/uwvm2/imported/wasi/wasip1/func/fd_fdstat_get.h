@@ -226,9 +226,6 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 
         ::uwvm2::imported::wasi::wasip1::memory::check_memory_bounds_wasm32(memory, stat_ptrsz, size_of_wasi_fdstat_t);
 
-        auto const& curr_fd_native_file{curr_fd.file_fd};
-        [[maybe_unused]] auto const native_fd{curr_fd_native_file.native_handle()};
-
         // Query native fd flags via fcntl(F_GETFL) for WASI fdflags mapping
         // All require initialization to prevent subsequent unconfigured settings from causing undefined behavior.
         ::uwvm2::imported::wasi::wasip1::abi::filetype_t fs_filetype{};                               // 0
@@ -236,98 +233,87 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         ::uwvm2::imported::wasi::wasip1::abi::rights_t fs_rights_base{curr_fd.rights_base};           // 8
         ::uwvm2::imported::wasi::wasip1::abi::rights_t fs_rights_inheriting{curr_fd.rights_inherit};  // 16
 
+        if(curr_fd.wasi_fd.ptr == nullptr) [[unlikely]]
+        {
+// This will be checked at runtime.
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+            ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+            return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+        }
+
+        switch(curr_fd.wasi_fd.ptr->wasi_fd_storage.type)
+        {
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::null:
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+            }
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file:
+            {
+                auto const& curr_fd_native_file{curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.file_fd};
+                [[maybe_unused]] auto const native_fd{curr_fd_native_file.native_handle()};
+
 #if (!defined(__NEWLIB__) || defined(__CYGWIN__)) && !defined(_WIN32) && __has_include(<dirent.h>) && !defined(_PICOLIBC__)
 # if defined(__linux__) && defined(__NR_fcntl)
-        int const oflags{::fast_io::system_call<__NR_fcntl, int>(native_fd, F_GETFL)};
+                int const oflags{::fast_io::system_call<__NR_fcntl, int>(native_fd, F_GETFL)};
 
-        if(::fast_io::linux_system_call_fails(oflags)) [[unlikely]]
-        {
-            int const err{static_cast<int>(-oflags)};
-            switch(err)
-            {
-                // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here, “eio” is used instead.
-                case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-                case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
-                default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-            }
-        }
+                if(::fast_io::linux_system_call_fails(oflags)) [[unlikely]]
+                {
+                    int const err{static_cast<int>(-oflags)};
+                    switch(err)
+                    {
+                        // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here, “eio” is used instead.
+                        case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                        case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
+                        default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                    }
+                }
 # else
-        int const oflags{::uwvm2::imported::wasi::wasip1::func::posix::fcntl(native_fd, F_GETFL)};
+                int const oflags{::uwvm2::imported::wasi::wasip1::func::posix::fcntl(native_fd, F_GETFL)};
 
-        if(oflags == -1) [[unlikely]]
-        {
-            switch(errno)
-            {
-                // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here, “eio” is used instead.
-                case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-                case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
-                default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-            }
-        }
+                if(oflags == -1) [[unlikely]]
+                {
+                    switch(errno)
+                    {
+                        // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here, “eio” is used instead.
+                        case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                        case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
+                        default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                    }
+                }
 # endif
 
 # ifdef O_APPEND
-        if(oflags & O_APPEND) { fs_flags |= ::uwvm2::imported::wasi::wasip1::abi::fdflags_t::fdflag_append; }
+                if(oflags & O_APPEND) { fs_flags |= ::uwvm2::imported::wasi::wasip1::abi::fdflags_t::fdflag_append; }
 # endif
 # ifdef O_DSYNC
-        if(oflags & O_DSYNC) { fs_flags |= ::uwvm2::imported::wasi::wasip1::abi::fdflags_t::fdflag_dsync; }
+                if(oflags & O_DSYNC) { fs_flags |= ::uwvm2::imported::wasi::wasip1::abi::fdflags_t::fdflag_dsync; }
 # endif
 # ifdef O_NONBLOCK
-        if(oflags & O_NONBLOCK) { fs_flags |= ::uwvm2::imported::wasi::wasip1::abi::fdflags_t::fdflag_nonblock; }
+                if(oflags & O_NONBLOCK) { fs_flags |= ::uwvm2::imported::wasi::wasip1::abi::fdflags_t::fdflag_nonblock; }
 # endif
 # ifdef O_RSYNC
-        if(oflags & O_RSYNC) { fs_flags |= ::uwvm2::imported::wasi::wasip1::abi::fdflags_t::fdflag_rsync; }
+                if(oflags & O_RSYNC) { fs_flags |= ::uwvm2::imported::wasi::wasip1::abi::fdflags_t::fdflag_rsync; }
 # endif
 # ifdef O_SYNC
-        if(oflags & O_SYNC) { fs_flags |= ::uwvm2::imported::wasi::wasip1::abi::fdflags_t::fdflag_sync; }
+                if(oflags & O_SYNC) { fs_flags |= ::uwvm2::imported::wasi::wasip1::abi::fdflags_t::fdflag_sync; }
 # endif
 #endif
 
-#if defined(_WIN32) && !defined(__CYGWIN__)
-        switch(curr_fd.file_type)
-        {
-            case ::uwvm2::imported::wasi::wasip1::fd_manager::win32_wasi_fd_typesize_t::socket:
-            {
-                fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_socket_stream;
-
-                char so_type{};
-                int optlen{static_cast<int>(sizeof(so_type))};
-                if(::fast_io::win32::getsockopt(curr_fd.socket_fd.native_handle(),
-                                                0xFFFF /*SOL_SOCKET*/,
-                                                0x1008 /*SO_TYPE*/,
-                                                ::std::addressof(so_type),
-                                                ::std::addressof(optlen)) == 0 &&
-                   optlen == sizeof(so_type))
-                {
-                    if(so_type == 2 /*SOCK_DGRAM*/) { fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_socket_dgram; }
-                }
-
-                break;
-            }
-# if defined(_WIN32_WINDOWS)
-            case ::uwvm2::imported::wasi::wasip1::fd_manager::win32_wasi_fd_typesize_t::dir:
-            {
-                // There is no need to use status, as status can only retrieve the creation time.
-                fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_directory;
-                break;
-            }
-# endif
-            case ::uwvm2::imported::wasi::wasip1::fd_manager::win32_wasi_fd_typesize_t::file:
-            {
                 ::fast_io::posix_file_status curr_fd_status;  // no initialize
 
-# ifdef UWVM_CPP_EXCEPTIONS
+#ifdef UWVM_CPP_EXCEPTIONS
                 try
-# endif
+#endif
                 {
                     curr_fd_status = status(curr_fd_native_file);
                 }
-# ifdef UWVM_CPP_EXCEPTIONS
+#ifdef UWVM_CPP_EXCEPTIONS
                 catch(::fast_io::error)
                 {
                     return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
                 }
-# endif
+#endif
 
                 switch(curr_fd_status.type)
                 {
@@ -348,6 +334,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     }
                     case ::fast_io::file_type::directory:
                     {
+                        // This is generally permitted: open the directory in read-only mode (file) and read only the metadata.
                         fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_directory;
                         break;
                     }
@@ -373,7 +360,23 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     }
                     case ::fast_io::file_type::socket:
                     {
+                        // This cannot happen under Win32, but it is still retained.
                         fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_socket_stream;
+
+#if (!defined(__NEWLIB__) || defined(__CYGWIN__)) && !(defined(_WIN32) && !defined(__CYGWIN__)) &&                                                             \
+    __has_include(<dirent.h>) && !defined(_PICOLIBC__) && !(defined(__MSDOS__) || defined(__DJGPP__))
+                        int so_type{};
+                        auto optlen{static_cast<::socklen_t>(sizeof(so_type))};
+                        if(::uwvm2::imported::wasi::wasip1::func::posix::getsockopt(native_fd,
+                                                                                    SOL_SOCKET,
+                                                                                    SO_TYPE,
+                                                                                    ::std::addressof(so_type),
+                                                                                    ::std::addressof(optlen)) == 0 &&
+                           optlen == sizeof(so_type))
+                        {
+                            if(so_type == SOCK_DGRAM) { fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_socket_dgram; }
+                        }
+#endif
                         break;
                     }
                     case ::fast_io::file_type::unknown:
@@ -395,111 +398,105 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 
                 break;
             }
-            [[unlikely]] default:
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::dir:
             {
-# if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
-                // Security issues inherent to virtual machines
-                ::uwvm2::utils::debug::trap_and_inform_bug_pos();
-# endif
-                fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
-                break;
-            }
-        }
-#else
-        ::fast_io::posix_file_status curr_fd_status;  // no initialize
+                // Retrieve the current directory, which is the top element of the directory stack.
+                auto const& curr_dir_stack{curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.dir_stack};
+                if(curr_dir_stack.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio; }
 
-# ifdef UWVM_CPP_EXCEPTIONS
-        try
-# endif
-        {
-            curr_fd_status = status(curr_fd_native_file);
-        }
-# ifdef UWVM_CPP_EXCEPTIONS
-        catch(::fast_io::error)
-        {
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-        }
-# endif
-
-        switch(curr_fd_status.type)
-        {
-            case ::fast_io::file_type::none:
-            {
-                fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
-                break;
-            }
-            case ::fast_io::file_type::not_found:
-            {
-                fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
-                break;
-            }
-            case ::fast_io::file_type::regular:
-            {
-                fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_regular_file;
-                break;
-            }
-            case ::fast_io::file_type::directory:
-            {
-                fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_directory;
-                break;
-            }
-            case ::fast_io::file_type::symlink:
-            {
-                fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_symbolic_link;
-                break;
-            }
-            case ::fast_io::file_type::block:
-            {
-                fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_block_device;
-                break;
-            }
-            case ::fast_io::file_type::character:
-            {
-                fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_character_device;
-                break;
-            }
-            case ::fast_io::file_type::fifo:
-            {
-                fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
-                break;
-            }
-            case ::fast_io::file_type::socket:
-            {
-                fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_socket_stream;
-
-# if (!defined(__NEWLIB__) || defined(__CYGWIN__)) && !defined(_WIN32) &&                                                                                      \
-     __has_include(<dirent.h>) && !defined(_PICOLIBC__) && !(defined(__MSDOS__) || defined(__DJGPP__))
-                int so_type{};
-                auto optlen{static_cast<::socklen_t>(sizeof(so_type))};
-                if(::uwvm2::imported::wasi::wasip1::func::posix::getsockopt(native_fd,
-                                                                            SOL_SOCKET,
-                                                                            SO_TYPE,
-                                                                            ::std::addressof(so_type),
-                                                                            ::std::addressof(optlen)) == 0 &&
-                   optlen == sizeof(so_type))
+                auto const& curr_dir_stack_entry{curr_dir_stack.dir_stack.back_unchecked()};
+                if(curr_dir_stack_entry.ptr == nullptr) [[unlikely]]
                 {
-                    if(so_type == SOCK_DGRAM) { fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_socket_dgram; }
+// This will be checked at runtime.
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                    ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                }
+
+                auto const& curr_fd_native_file{curr_dir_stack_entry.ptr->dir_stack.file};
+                [[maybe_unused]] auto const native_fd{curr_fd_native_file.native_handle()};
+
+#if (!defined(__NEWLIB__) || defined(__CYGWIN__)) && !defined(_WIN32) && __has_include(<dirent.h>) && !defined(_PICOLIBC__)
+# if defined(__linux__) && defined(__NR_fcntl)
+                int const oflags{::fast_io::system_call<__NR_fcntl, int>(native_fd, F_GETFL)};
+
+                if(::fast_io::linux_system_call_fails(oflags)) [[unlikely]]
+                {
+                    int const err{static_cast<int>(-oflags)};
+                    switch(err)
+                    {
+                        // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here, “eio” is used instead.
+                        case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                        case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
+                        default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                    }
+                }
+# else
+                int const oflags{::uwvm2::imported::wasi::wasip1::func::posix::fcntl(native_fd, F_GETFL)};
+
+                if(oflags == -1) [[unlikely]]
+                {
+                    switch(errno)
+                    {
+                        // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here, “eio” is used instead.
+                        case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                        case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
+                        default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                    }
                 }
 # endif
+
+# ifdef O_APPEND
+                if(oflags & O_APPEND) { fs_flags |= ::uwvm2::imported::wasi::wasip1::abi::fdflags_t::fdflag_append; }
+# endif
+# ifdef O_DSYNC
+                if(oflags & O_DSYNC) { fs_flags |= ::uwvm2::imported::wasi::wasip1::abi::fdflags_t::fdflag_dsync; }
+# endif
+# ifdef O_NONBLOCK
+                if(oflags & O_NONBLOCK) { fs_flags |= ::uwvm2::imported::wasi::wasip1::abi::fdflags_t::fdflag_nonblock; }
+# endif
+# ifdef O_RSYNC
+                if(oflags & O_RSYNC) { fs_flags |= ::uwvm2::imported::wasi::wasip1::abi::fdflags_t::fdflag_rsync; }
+# endif
+# ifdef O_SYNC
+                if(oflags & O_SYNC) { fs_flags |= ::uwvm2::imported::wasi::wasip1::abi::fdflags_t::fdflag_sync; }
+# endif
+#endif
+
+                // Since all content is opened in directory mode, it is impossible for non-directory scenarios to occur.
+                fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_directory;
+
                 break;
             }
-            case ::fast_io::file_type::unknown:
+#if defined(_WIN32) && !defined(__CYGWIN__)
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::socket:
             {
-                fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
+                auto const& curr_fd_native_file{curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.socket_fd};
+                auto const native_fd{curr_fd_native_file.native_handle()};
+
+                fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_socket_stream;
+
+                char so_type{};
+                int optlen{static_cast<int>(sizeof(so_type))};
+                if(::fast_io::win32::getsockopt(native_fd, 0xFFFF /*SOL_SOCKET*/, 0x1008 /*SO_TYPE*/, ::std::addressof(so_type), ::std::addressof(optlen)) ==
+                       0 &&
+                   optlen == sizeof(so_type))
+                {
+                    if(so_type == 2 /*SOCK_DGRAM*/) { fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_socket_dgram; }
+                }
+
                 break;
             }
-            case ::fast_io::file_type::remote:
-            {
-                fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
-                break;
-            }
+#endif
             [[unlikely]] default:
             {
-                fs_filetype = ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_unknown;
-                break;
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
             }
         }
-#endif
 
         if constexpr(is_default_wasi_fdstat_data_layout())
         {
