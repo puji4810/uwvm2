@@ -62,12 +62,13 @@ int main()
 
     // Setup fd=4 with valid file and all rights
     auto& fd4 = *env.fd_storage.opens.index_unchecked(4uz).fd_p;
-    fd4.file_fd =
-        ::fast_io::native_file{u8"test_fd_fdstat_set_flags_wasm64.tmp", ::fast_io::open_mode::out | ::fast_io::open_mode::creat | ::fast_io::open_mode::trunc};
     fd4.rights_base = static_cast<rights_wasm64_t>(-1);
     fd4.rights_inherit = static_cast<rights_wasm64_t>(-1);
+    fd4.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
+    fd4.wasi_fd.ptr->wasi_fd_storage.storage.file_fd =
+        ::fast_io::native_file{u8"test_fd_fdstat_set_flags_wasm64.tmp", ::fast_io::open_mode::out | ::fast_io::open_mode::creat | ::fast_io::open_mode::trunc};
 
-    int const native_fd = fd4.file_fd.native_handle();
+    int const native_fd = fd4.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.native_handle();
 
     // Baseline: ensure we can read current flags
     int const curr0 = ::uwvm2::imported::wasi::wasip1::func::posix::fcntl(native_fd, F_GETFL);
@@ -395,9 +396,10 @@ int main()
     // Case 4: enotcapable when rights missing
     {
         auto& fde = *env.fd_storage.opens.index_unchecked(3uz).fd_p;
-        fde.file_fd = ::fast_io::native_file{u8"test_fd_fdstat_set_flags_wasm64_rights.tmp",
-                                             ::fast_io::open_mode::out | ::fast_io::open_mode::creat | ::fast_io::open_mode::trunc};
         fde.rights_base = static_cast<rights_wasm64_t>(0);
+        fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
+        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd = ::fast_io::native_file{u8"test_fd_fdstat_set_flags_wasm64_rights.tmp",
+                                             ::fast_io::open_mode::out | ::fast_io::open_mode::creat | ::fast_io::open_mode::trunc};
 
         auto const ret =
             ::uwvm2::imported::wasi::wasip1::func::fd_fdstat_set_flags_wasm64(env, static_cast<wasi_posix_fd_wasm64_t>(3), fdflags_wasm64_t::fdflag_append);
@@ -411,9 +413,10 @@ int main()
     // Case 5: ebadf after fd_close
     {
         auto& fde = *env.fd_storage.opens.index_unchecked(2uz).fd_p;
-        fde.file_fd = ::fast_io::native_file{u8"test_fd_fdstat_set_flags_wasm64_close.tmp",
-                                             ::fast_io::open_mode::out | ::fast_io::open_mode::creat | ::fast_io::open_mode::trunc};
         fde.rights_base = static_cast<rights_wasm64_t>(-1);
+        fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
+        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd = ::fast_io::native_file{u8"test_fd_fdstat_set_flags_wasm64_close.tmp",
+                                             ::fast_io::open_mode::out | ::fast_io::open_mode::creat | ::fast_io::open_mode::trunc};
 
         auto const closed = ::uwvm2::imported::wasi::wasip1::func::fd_close_wasm64(env, static_cast<wasi_posix_fd_wasm64_t>(2));
         if(closed != errno_wasm64_t::esuccess)
@@ -727,10 +730,10 @@ int main()
         // Setup fd=4 as a Win32 socket with all rights
         {
             auto& fd4 = *env.fd_storage.opens.index_unchecked(4uz).fd_p;
-            fd4.socket_fd = ::fast_io::win32_socket_file{::fast_io::socket_family::ipv4, ::fast_io::socket_type::stream, ::fast_io::socket_protocol::tcp};
-            fd4.file_type = ::uwvm2::imported::wasi::wasip1::fd_manager::win32_wasi_fd_typesize_t::socket;
             fd4.rights_base = static_cast<rights_wasm64_t>(-1);
             fd4.rights_inherit = static_cast<rights_wasm64_t>(-1);
+            fd4.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::socket);
+            fd4.wasi_fd.ptr->wasi_fd_storage.storage.socket_fd = ::fast_io::win32_socket_file{::fast_io::socket_family::ipv4, ::fast_io::socket_type::stream, ::fast_io::socket_protocol::tcp};
     
             // nonblock should be supported on sockets
             {
@@ -778,9 +781,9 @@ int main()
         // Rights missing => enotcapable
         {
             auto& fde = *env.fd_storage.opens.index_unchecked(3uz).fd_p;
-            fde.socket_fd = ::fast_io::win32_socket_file{::fast_io::socket_family::ipv4, ::fast_io::socket_type::stream, ::fast_io::socket_protocol::tcp};
-            fde.file_type = ::uwvm2::imported::wasi::wasip1::fd_manager::win32_wasi_fd_typesize_t::socket;
             fde.rights_base = static_cast<rights_wasm64_t>(0);
+            fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::socket);
+            fde.wasi_fd.ptr->wasi_fd_storage.storage.socket_fd = ::fast_io::win32_socket_file{::fast_io::socket_family::ipv4, ::fast_io::socket_type::stream, ::fast_io::socket_protocol::tcp};
     
             auto const ret = ::uwvm2::imported::wasi::wasip1::func::fd_fdstat_set_flags_wasm64(env,
                                                                                                  static_cast<wasi_posix_fd_wasm64_t>(3),
@@ -795,9 +798,9 @@ int main()
         // After close => ebadf
         {
             auto& fde = *env.fd_storage.opens.index_unchecked(2uz).fd_p;
-            fde.socket_fd = ::fast_io::win32_socket_file{::fast_io::socket_family::ipv4, ::fast_io::socket_type::stream, ::fast_io::socket_protocol::tcp};
-            fde.file_type = ::uwvm2::imported::wasi::wasip1::fd_manager::win32_wasi_fd_typesize_t::socket;
             fde.rights_base = static_cast<rights_wasm64_t>(-1);
+            fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::socket);
+            fde.wasi_fd.ptr->wasi_fd_storage.storage.socket_fd = ::fast_io::win32_socket_file{::fast_io::socket_family::ipv4, ::fast_io::socket_type::stream, ::fast_io::socket_protocol::tcp};
     
             auto const closed = ::uwvm2::imported::wasi::wasip1::func::fd_close_wasm64(env, static_cast<wasi_posix_fd_wasm64_t>(2));
             if(closed != errno_wasm64_t::esuccess)

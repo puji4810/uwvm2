@@ -226,7 +226,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
 #endif
                 };
-                auto const file_fd_handle{file_fd.native_handle()};
+                [[maybe_unused]] auto const file_fd_handle{file_fd.native_handle()};
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
                 // Win32 only supports setting flags during creation.
