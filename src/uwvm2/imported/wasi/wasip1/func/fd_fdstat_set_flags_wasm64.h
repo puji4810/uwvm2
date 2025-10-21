@@ -543,7 +543,10 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     {
                         // If "ebadf" appears here, it is caused by a WASI implementation issue. This differs from WASI's 'ebadf'; here, "eio" is used instead.
                         case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
-                        case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
+                        // On Linux/Posix systems, the flags modifiable via `F_SETFL` are typically limited to `O_APPEND`/`O_NONBLOCK` (and a few
+                        // implementation-dependent flags). `O_SYNC`/`O_DSYNC`/`O_RSYNC` generally cannot be modified through `F_SETFL`, and the kernel often
+                        // returns `EINVAL`. Here, we uniformly note that these flags are not supported.
+                        case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
                         case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eacces;
                         case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eperm;
                         case EINTR: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eintr;
