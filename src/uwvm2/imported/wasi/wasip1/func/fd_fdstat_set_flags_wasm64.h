@@ -1,4 +1,4 @@
-﻿
+
 /*************************************************************
  * Ultimate WebAssembly Virtual Machine (Version 2)          *
  * Copyright (c) 2025-present UlteSoft. All rights reserved. *
@@ -72,7 +72,7 @@
 UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 {
 
-    /// @brief     WasiPreview1.fd_fdstat_set_flags
+    /// @brief     WasiPreview1.fd_fdstat_set_flags (wasm64)
     /// @details   __wasi_errno_t fd_fdstat_set_flags(__wasi_fd_t fd, __wasi_fdflags_t flags);
     ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t fd_fdstat_set_flags_wasm64(
         ::uwvm2::imported::wasi::wasip1::environment::wasip1_environment<::uwvm2::object::memory::linear::native_memory_t> & env,
@@ -190,9 +190,6 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         // curr_fd_uniptr is not null.
         auto& curr_fd{*curr_wasi_fd_t_p};
 
-        auto const& curr_fd_native_file{curr_fd.file_fd};
-        [[maybe_unused]] auto const native_fd{curr_fd_native_file.native_handle()};
-
         // If obtained from the renumber map, it will always be the correct value. If obtained from the open vec, it requires checking whether it is closed.
         // Therefore, a unified check is implemented.
         if(curr_fd.close_pos != SIZE_MAX) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::ebadf; }
@@ -203,442 +200,920 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotcapable;
         }
 
+        // If ptr is null, it indicates an attempt to open a closed file. However, the preceding check for close pos already prevents such closed files from
+        // being processed, making this a virtual machine implementation error.
+        if(curr_fd.wasi_fd.ptr == nullptr) [[unlikely]]
+        {
+// This will be checked at runtime.
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+            ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+        }
+
+        switch(curr_fd.wasi_fd.ptr->wasi_fd_storage.type)
+        {
+            [[unlikely]] case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::null:
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+            }
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file:
+            {
+                auto& file_fd{
 #if defined(_WIN32) && !defined(__CYGWIN__)
+                    curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file
+#else
+                    curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
+#endif
+                };
+                auto const file_fd_handle{file_fd.native_handle()};
 
-        if(curr_fd.file_type == ::uwvm2::imported::wasi::wasip1::fd_manager::win32_wasi_fd_typesize_t::socket)
-        {
-            // For ws2, support for setting nonblock is available.
-            // Since the flags on ws2 are fixed and confirmed, there is no need to perform verification again after configuration.
-            if((flags &
-                (::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append | ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync |
-                 ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync | ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync)) !=
-               ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t{}) [[unlikely]]
-            {
-                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
-            }
-
-            ::std::uint_least32_t mode{static_cast<::std::uint_least32_t>((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock) ==
-                                                                          ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock)};
-
-            if(::fast_io::win32::ioctlsocket(curr_fd.socket_fd.native_handle(), 0x8004'667El /*FIONBIO*/, ::std::addressof(mode)) == -1) [[unlikely]]
-            {
-                switch(::fast_io::win32::WSAGetLastError())
+#if defined(_WIN32) && !defined(__CYGWIN__)
+                // Win32 only supports setting flags during creation.
+                if((flags & (::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append |
+                             ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync |
+                             ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync |
+                             ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync |
+                             ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock)) !=
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t{}) [[unlikely]]
                 {
-                    case 10022 /*WSAEINVAL*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
-                    case 10004 /*WSAEINTR*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eintr;
-                    case 10038 /*WSAENOTSOCK*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::ebadf;
-                    case 10013 /*WSAEACCES*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eacces;
-                    default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
                 }
-            }
 
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess;
-        }
-        else
-        {
-            // All closed, then permitted: no-op success
-            if((flags &
-                (::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append | ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync |
-                 ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync | ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync |
-                 ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock)) != ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t{})
-                [[unlikely]]
-            {
-                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
-            }
-
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess;
-        }
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess;
 
 #elif (!defined(__NEWLIB__) || defined(__CYGWIN__)) && __has_include(<dirent.h>) && !defined(_PICOLIBC__) && !(defined(__MSDOS__) || defined(__DJGPP__))
 
-        // Preserve unrelated OS flags: read current flags first, then toggle only WASI-managed bits.
+                // Preserve unrelated OS flags: read current flags first, then toggle only WASI-managed bits.
 # if defined(__linux__) && defined(__NR_fcntl)
-        int const curr_flags{::fast_io::system_call<__NR_fcntl, int>(native_fd, F_GETFL)};
-        if(::fast_io::linux_system_call_fails(curr_flags)) [[unlikely]]
-        {
-            int const err{static_cast<int>(-curr_flags)};
-            switch(err)
-            {
-                // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here, “eio” is used instead.
-                case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
-                case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
-                default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
-            }
-        }
+                int const curr_flags{::fast_io::system_call<__NR_fcntl, int>(file_fd_handle, F_GETFL)};
+                if(::fast_io::linux_system_call_fails(curr_flags)) [[unlikely]]
+                {
+                    int const err{static_cast<int>(-curr_flags)};
+                    switch(err)
+                    {
+                        // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here, “eio” is used instead.
+                        case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                        case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
+                        default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                    }
+                }
 
-        int new_oflags{curr_flags};
+                int new_oflags{curr_flags};
 # else
-        // Although djgpp provides these flags, it only supports F_DUPFD, so it is prohibited here.
+                // Although djgpp provides these flags, it only supports F_DUPFD, so it is prohibited here.
 
-        int const curr_flags{::uwvm2::imported::wasi::wasip1::func::posix::fcntl(native_fd, F_GETFL)};
-        if(curr_flags == -1) [[unlikely]]
-        {
-            switch(errno)
-            {
-                // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here, “eio” is used instead.
-                case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
-                case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
-                default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
-            }
-        }
+                int const curr_flags{::uwvm2::imported::wasi::wasip1::func::posix::fcntl(file_fd_handle, F_GETFL)};
+                if(curr_flags == -1) [[unlikely]]
+                {
+                    switch(errno)
+                    {
+                        // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here, “eio” is used instead.
+                        case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                        case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
+                        default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                    }
+                }
 
-        int new_oflags{curr_flags};
+                int new_oflags{curr_flags};
 # endif
 
-        // Toggle per-WASI bits only.
+                // Toggle per-WASI bits only.
 # if defined(O_APPEND) && O_APPEND != 0
-        if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append) ==
-           ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append)
-        {
-            new_oflags |= O_APPEND;
-        }
-        else
-        {
-            new_oflags &= ~O_APPEND;
-        }
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append)
+                {
+                    new_oflags |= O_APPEND;
+                }
+                else
+                {
+                    new_oflags &= ~O_APPEND;
+                }
 # else
-        if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append) ==
-           ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append)
-        {
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
-        }
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
 # endif
 
 # if defined(O_NONBLOCK) && O_NONBLOCK != 0
-        if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock) ==
-           ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock)
-        {
-            new_oflags |= O_NONBLOCK;
-        }
-        else
-        {
-            new_oflags &= ~O_NONBLOCK;
-        }
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock)
+                {
+                    new_oflags |= O_NONBLOCK;
+                }
+                else
+                {
+                    new_oflags &= ~O_NONBLOCK;
+                }
 # else
-        if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock) ==
-           ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock)
-        {
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
-        }
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
 # endif
 
 # if (defined(O_DSYNC) && O_DSYNC != 0) && (defined(O_SYNC) && O_SYNC != 0) && (defined(O_RSYNC) && O_RSYNC != 0) && ((O_SYNC | O_DSYNC) == O_SYNC) &&         \
      (O_RSYNC == O_SYNC)
-        // On Android, O_SYNC is a superset of O_DSYNC, and O_RSYNC == O_SYNC. Requesting SYNC or RSYNC implies O_SYNC.
-        if(((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) ==
-            ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) ||
-           ((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
-            ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync))
-        {
-            new_oflags |= O_SYNC;
-        }
-        else if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
-                ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
-        {
-            new_oflags |= O_DSYNC;
-        }
-        else
-        {
-            new_oflags &= ~(O_SYNC | O_DSYNC);
-        }
+                // On Android, O_SYNC is a superset of O_DSYNC, and O_RSYNC == O_SYNC. Requesting SYNC or RSYNC implies O_SYNC.
+                if(((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) ==
+                    ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) ||
+                   ((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
+                    ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync))
+                {
+                    new_oflags |= O_SYNC;
+                }
+                else if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
+                        ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
+                {
+                    new_oflags |= O_DSYNC;
+                }
+                else
+                {
+                    new_oflags &= ~(O_SYNC | O_DSYNC);
+                }
 # elif (defined(O_DSYNC) && O_DSYNC != 0) && (defined(O_SYNC) && O_SYNC != 0) && ((O_SYNC | O_DSYNC) == O_SYNC)
-        if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) == ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync)
-        {
-            new_oflags |= O_SYNC;
-        }
-        else if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
-                ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
-        {
-            new_oflags |= O_DSYNC;
-        }
-        else
-        {
-            new_oflags &= ~O_SYNC;
-        }
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync)
+                {
+                    new_oflags |= O_SYNC;
+                }
+                else if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
+                        ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
+                {
+                    new_oflags |= O_DSYNC;
+                }
+                else
+                {
+                    new_oflags &= ~O_SYNC;
+                }
 
 #  if defined(O_RSYNC) && O_RSYNC != 0
-        if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
-           ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync)
-        {
-            new_oflags |= O_RSYNC;
-        }
-        else
-        {
-            new_oflags &= ~O_RSYNC;
-        }
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync)
+                {
+                    new_oflags |= O_RSYNC;
+                }
+                else
+                {
+                    new_oflags &= ~O_RSYNC;
+                }
 #  else
-        if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
-           ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync)
-        {
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
-        }
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
 #  endif
 # elif (defined(O_SYNC) && O_SYNC != 0) && (defined(O_RSYNC) && O_RSYNC != 0) && (O_RSYNC == O_SYNC)
-        if(((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) ==
-            ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) ||
-           ((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
-            ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync))
-        {
-            new_oflags |= O_SYNC;
-        }
-        else
-        {
-            new_oflags &= ~O_SYNC;
-        }
+                if(((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) ==
+                    ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) ||
+                   ((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
+                    ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync))
+                {
+                    new_oflags |= O_SYNC;
+                }
+                else
+                {
+                    new_oflags &= ~O_SYNC;
+                }
 
 #  if defined(O_DSYNC) && O_DSYNC != 0
-        if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
-           ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
-        {
-            new_oflags |= O_DSYNC;
-        }
-        else
-        {
-            new_oflags &= ~O_DSYNC;
-        }
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
+                {
+                    new_oflags |= O_DSYNC;
+                }
+                else
+                {
+                    new_oflags &= ~O_DSYNC;
+                }
 #  else
-        if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
-           ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
-        {
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
-        }
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
 #  endif
 # else
-        // default
+                // default
 #  if defined(O_DSYNC) && O_DSYNC != 0
-        if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
-           ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
-        {
-            new_oflags |= O_DSYNC;
-        }
-        else
-        {
-            new_oflags &= ~O_DSYNC;
-        }
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
+                {
+                    new_oflags |= O_DSYNC;
+                }
+                else
+                {
+                    new_oflags &= ~O_DSYNC;
+                }
 #  else
-        if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
-           ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
-        {
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
-        }
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
 #  endif
 
 #  if defined(O_RSYNC) && O_RSYNC != 0
-        if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
-           ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync)
-        {
-            new_oflags |= O_RSYNC;
-        }
-        else
-        {
-            new_oflags &= ~O_RSYNC;
-        }
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync)
+                {
+                    new_oflags |= O_RSYNC;
+                }
+                else
+                {
+                    new_oflags &= ~O_RSYNC;
+                }
 #  else
-        if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
-           ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync)
-        {
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
-        }
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
 #  endif
 
 #  if defined(O_SYNC) && O_SYNC != 0
-        if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) == ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync)
-        {
-            new_oflags |= O_SYNC;
-        }
-        else
-        {
-            new_oflags &= ~O_SYNC;
-        }
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync)
+                {
+                    new_oflags |= O_SYNC;
+                }
+                else
+                {
+                    new_oflags &= ~O_SYNC;
+                }
 #  else
-        if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) == ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync)
-        {
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
-        }
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
 #  endif
 # endif
 
 # if defined(__linux__) && defined(__NR_fcntl)
-        int const set_res{::fast_io::system_call<__NR_fcntl, int>(native_fd, F_SETFL, new_oflags)};
+                int const set_res{::fast_io::system_call<__NR_fcntl, int>(file_fd_handle, F_SETFL, new_oflags)};
 
-        if(::fast_io::linux_system_call_fails(set_res)) [[unlikely]]
-        {
-            int const err{static_cast<int>(-set_res)};
-            switch(err)
-            {
-                // If "ebadf" appears here, it is caused by a WASI implementation issue. This differs from WASI's 'ebadf'; here, "eio" is used instead.
-                case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
-                case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
-                case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eacces;
-                case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eperm;
-                case EINTR: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eintr;
-                default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
-            }
-        }
+                if(::fast_io::linux_system_call_fails(set_res)) [[unlikely]]
+                {
+                    int const err{static_cast<int>(-set_res)};
+                    switch(err)
+                    {
+                        // If "ebadf" appears here, it is caused by a WASI implementation issue. This differs from WASI's 'ebadf'; here, "eio" is used instead.
+                        case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                        // On Linux/Posix systems, the flags modifiable via `F_SETFL` are typically limited to `O_APPEND`/`O_NONBLOCK` (and a few
+                        // implementation-dependent flags). `O_SYNC`/`O_DSYNC`/`O_RSYNC` generally cannot be modified through `F_SETFL`, and the kernel often
+                        // returns `EINVAL`. Here, we uniformly note that these flags are not supported.
+                        case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                        case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eacces;
+                        case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eperm;
+                        case EINTR: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eintr;
+                        default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                    }
+                }
 
-        // Verify that the flags were actually set by reading them back
-        int const verify_flags{::fast_io::system_call<__NR_fcntl, int>(native_fd, F_GETFL)};
-        if(::fast_io::linux_system_call_fails(verify_flags)) [[unlikely]]
-        {
-            int const err{static_cast<int>(-verify_flags)};
-            switch(err)
-            {
-                case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
-                case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
-                default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
-            }
-        }
+                // Verify that the flags were actually set by reading them back
+                int const verify_flags{::fast_io::system_call<__NR_fcntl, int>(file_fd_handle, F_GETFL)};
+                if(::fast_io::linux_system_call_fails(verify_flags)) [[unlikely]]
+                {
+                    int const err{static_cast<int>(-verify_flags)};
+                    switch(err)
+                    {
+                        case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                        case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
+                        default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                    }
+                }
 
-        // Check if the WASI-managed flags match what we expected
-        int wasi_managed_flags{};
-        int actual_wasi_flags{};
+                // Check if the WASI-managed flags match what we expected
+                int wasi_managed_flags{};
+                int actual_wasi_flags{};
 
 #  if defined(O_APPEND) && O_APPEND != 0
-        wasi_managed_flags |= (new_oflags & O_APPEND);
-        actual_wasi_flags |= (verify_flags & O_APPEND);
+                wasi_managed_flags |= (new_oflags & O_APPEND);
+                actual_wasi_flags |= (verify_flags & O_APPEND);
 #  endif
 
 #  if defined(O_NONBLOCK) && O_NONBLOCK != 0
-        wasi_managed_flags |= (new_oflags & O_NONBLOCK);
-        actual_wasi_flags |= (verify_flags & O_NONBLOCK);
+                wasi_managed_flags |= (new_oflags & O_NONBLOCK);
+                actual_wasi_flags |= (verify_flags & O_NONBLOCK);
 #  endif
 
 #  if defined(O_DSYNC) && O_DSYNC != 0
-        wasi_managed_flags |= (new_oflags & O_DSYNC);
-        actual_wasi_flags |= (verify_flags & O_DSYNC);
+                wasi_managed_flags |= (new_oflags & O_DSYNC);
+                actual_wasi_flags |= (verify_flags & O_DSYNC);
 #  endif
 
 #  if defined(O_RSYNC) && O_RSYNC != 0
-        wasi_managed_flags |= (new_oflags & O_RSYNC);
-        actual_wasi_flags |= (verify_flags & O_RSYNC);
+                wasi_managed_flags |= (new_oflags & O_RSYNC);
+                actual_wasi_flags |= (verify_flags & O_RSYNC);
 #  endif
 
 #  if defined(O_SYNC) && O_SYNC != 0
-        wasi_managed_flags |= (new_oflags & O_SYNC);
-        actual_wasi_flags |= (verify_flags & O_SYNC);
+                wasi_managed_flags |= (new_oflags & O_SYNC);
+                actual_wasi_flags |= (verify_flags & O_SYNC);
 #  endif
 
-        if(wasi_managed_flags != actual_wasi_flags) [[unlikely]]
-        {
-            // Attempt to restore
-            int const set_res{::fast_io::system_call<__NR_fcntl, int>(native_fd, F_SETFL, curr_flags)};
-            if(::fast_io::linux_system_call_fails(set_res)) [[unlikely]]
-            {
-                // eio: An I/O exception occurred that we cannot control or recover from (e.g., rollback failure, sporadic F_GETFL failure, etc.).
-                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
-            }
-            else
-            {
-                // enotsup: The requested semantics are unsupported, and we guarantee behavior that “appears atomic” to the caller (either no change or a
-                // rollback).
-                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
-            }
-        }
+                if(wasi_managed_flags != actual_wasi_flags) [[unlikely]]
+                {
+                    // Attempt to restore
+                    int const set_res{::fast_io::system_call<__NR_fcntl, int>(file_fd_handle, F_SETFL, curr_flags)};
+                    if(::fast_io::linux_system_call_fails(set_res)) [[unlikely]]
+                    {
+                        // eio: An I/O exception occurred that we cannot control or recover from (e.g., rollback failure, sporadic F_GETFL failure, etc.).
+                        return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                    }
+                    else
+                    {
+                        // enotsup: The requested semantics are unsupported, and we guarantee behavior that “appears atomic” to the caller (either no change or
+                        // a rollback).
+                        return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                    }
+                }
 
 # else
-        int const set_res{::uwvm2::imported::wasi::wasip1::func::posix::fcntl(native_fd, F_SETFL, new_oflags)};
+                int const set_res{::uwvm2::imported::wasi::wasip1::func::posix::fcntl(file_fd_handle, F_SETFL, new_oflags)};
 
-        if(set_res == -1) [[unlikely]]
-        {
-            switch(errno)
-            {
-                // If "ebadf" appears here, it is caused by a WASI implementation issue. This differs from WASI's 'ebadf'; here, "eio" is used instead.
-                case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
-                case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
-                case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eacces;
-                case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eperm;
-                case EINTR: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eintr;
-                default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
-            }
-        }
+                if(set_res == -1) [[unlikely]]
+                {
+                    switch(errno)
+                    {
+                        // If "ebadf" appears here, it is caused by a WASI implementation issue. This differs from WASI's 'ebadf'; here, "eio" is used instead.
+                        case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                        case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
+                        case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eacces;
+                        case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eperm;
+                        case EINTR: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eintr;
+                        default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                    }
+                }
 
-        // Verify that the flags were actually set by reading them back
-        int const verify_flags{::uwvm2::imported::wasi::wasip1::func::posix::fcntl(native_fd, F_GETFL)};
-        if(verify_flags == -1) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio; }
+                // Verify that the flags were actually set by reading them back
+                int const verify_flags{::uwvm2::imported::wasi::wasip1::func::posix::fcntl(file_fd_handle, F_GETFL)};
+                if(verify_flags == -1) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio; }
 
-        // Check if the WASI-managed flags match what we expected
-        int wasi_managed_flags{};
-        int actual_wasi_flags{};
+                // Check if the WASI-managed flags match what we expected
+                int wasi_managed_flags{};
+                int actual_wasi_flags{};
 
 #  if defined(O_APPEND) && O_APPEND != 0
-        wasi_managed_flags |= (new_oflags & O_APPEND);
-        actual_wasi_flags |= (verify_flags & O_APPEND);
+                wasi_managed_flags |= (new_oflags & O_APPEND);
+                actual_wasi_flags |= (verify_flags & O_APPEND);
 #  endif
 
 #  if defined(O_NONBLOCK) && O_NONBLOCK != 0
-        wasi_managed_flags |= (new_oflags & O_NONBLOCK);
-        actual_wasi_flags |= (verify_flags & O_NONBLOCK);
+                wasi_managed_flags |= (new_oflags & O_NONBLOCK);
+                actual_wasi_flags |= (verify_flags & O_NONBLOCK);
 #  endif
 
 #  if defined(O_DSYNC) && O_DSYNC != 0
-        wasi_managed_flags |= (new_oflags & O_DSYNC);
-        actual_wasi_flags |= (verify_flags & O_DSYNC);
+                wasi_managed_flags |= (new_oflags & O_DSYNC);
+                actual_wasi_flags |= (verify_flags & O_DSYNC);
 #  endif
 
 #  if defined(O_RSYNC) && O_RSYNC != 0
-        wasi_managed_flags |= (new_oflags & O_RSYNC);
-        actual_wasi_flags |= (verify_flags & O_RSYNC);
+                wasi_managed_flags |= (new_oflags & O_RSYNC);
+                actual_wasi_flags |= (verify_flags & O_RSYNC);
 #  endif
 
 #  if defined(O_SYNC) && O_SYNC != 0
-        wasi_managed_flags |= (new_oflags & O_SYNC);
-        actual_wasi_flags |= (verify_flags & O_SYNC);
+                wasi_managed_flags |= (new_oflags & O_SYNC);
+                actual_wasi_flags |= (verify_flags & O_SYNC);
 #  endif
 
-        if(wasi_managed_flags != actual_wasi_flags) [[unlikely]]
-        {
-            // Attempt to restore
-            int const set_res{::uwvm2::imported::wasi::wasip1::func::posix::fcntl(native_fd, F_SETFL, curr_flags)};
-            if(set_res == -1) [[unlikely]]
-            {
-                // eio: An I/O exception occurred that we cannot control or recover from (e.g., rollback failure, sporadic F_GETFL failure, etc.).
-                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
-            }
-            else
-            {
-                // enotsup: The requested semantics are unsupported, and we guarantee behavior that “appears atomic” to the caller (either no change or a
-                // rollback).
-                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
-            }
-        }
+                if(wasi_managed_flags != actual_wasi_flags) [[unlikely]]
+                {
+                    // Attempt to restore
+                    int const set_res{::uwvm2::imported::wasi::wasip1::func::posix::fcntl(file_fd_handle, F_SETFL, curr_flags)};
+                    if(set_res == -1) [[unlikely]]
+                    {
+                        // eio: An I/O exception occurred that we cannot control or recover from (e.g., rollback failure, sporadic F_GETFL failure, etc.).
+                        return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                    }
+                    else
+                    {
+                        // enotsup: The requested semantics are unsupported, and we guarantee behavior that “appears atomic” to the caller (either no change or
+                        // a rollback).
+                        return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                    }
+                }
 
 # endif
-        return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess;
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess;
 #else
-        // Systems that do not support modifying file attributes mid-process
+                // Systems that do not support modifying file attributes mid-process
 
-        if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append) ==
-           ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append)
-        {
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
-        }
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
 
-        if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
-           ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
-        {
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
-        }
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
 
-        if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock) ==
-           ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock)
-        {
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
-        }
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
 
-        if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
-           ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync)
-        {
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
-        }
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
 
-        if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) == ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync)
-        {
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
-        }
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
 
-        // When the system does not support modifying file attributes at all, passing flags set to 0 indicates success.
-        return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess;
+                // When the system does not support modifying file attributes at all, passing flags set to 0 indicates success.
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess;
 #endif
+            }
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::dir:
+            {
+                // Retrieve the current directory, which is the top element of the directory stack.
+                auto const& curr_dir_stack{curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.dir_stack};
+                if(curr_dir_stack.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio; }
+
+                auto const& curr_dir_stack_entry{curr_dir_stack.dir_stack.back_unchecked()};
+                if(curr_dir_stack_entry.ptr == nullptr) [[unlikely]]
+                {
+// This will be checked at runtime.
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                    ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                }
+
+                auto const& curr_dir_file{curr_dir_stack_entry.ptr->dir_stack.file};
+                [[maybe_unused]] auto const curr_dir_file_native_handle{curr_dir_file.native_handle()};
+
+#if defined(_WIN32) && !defined(__CYGWIN__)
+                // Win32 only supports setting flags during creation.
+                if((flags & (::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append |
+                             ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync |
+                             ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync |
+                             ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync |
+                             ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock)) !=
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t{}) [[unlikely]]
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
+
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess;
+
+#elif (!defined(__NEWLIB__) || defined(__CYGWIN__)) && __has_include(<dirent.h>) && !defined(_PICOLIBC__) && !(defined(__MSDOS__) || defined(__DJGPP__))
+
+                // Preserve unrelated OS flags: read current flags first, then toggle only WASI-managed bits.
+# if defined(__linux__) && defined(__NR_fcntl)
+                int const curr_flags{::fast_io::system_call<__NR_fcntl, int>(curr_dir_file_native_handle, F_GETFL)};
+                if(::fast_io::linux_system_call_fails(curr_flags)) [[unlikely]]
+                {
+                    int const err{static_cast<int>(-curr_flags)};
+                    switch(err)
+                    {
+                        // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here, “eio” is used instead.
+                        case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                        case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
+                        default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                    }
+                }
+
+                int new_oflags{curr_flags};
+# else
+                // Although djgpp provides these flags, it only supports F_DUPFD, so it is prohibited here.
+
+                int const curr_flags{::uwvm2::imported::wasi::wasip1::func::posix::fcntl(curr_dir_file_native_handle, F_GETFL)};
+                if(curr_flags == -1) [[unlikely]]
+                {
+                    switch(errno)
+                    {
+                        // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here, “eio” is used instead.
+                        case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                        case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
+                        default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                    }
+                }
+
+                int new_oflags{curr_flags};
+# endif
+
+                // Toggle per-WASI bits only.
+# if defined(O_APPEND) && O_APPEND != 0
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append)
+                {
+                    new_oflags |= O_APPEND;
+                }
+                else
+                {
+                    new_oflags &= ~O_APPEND;
+                }
+# else
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
+# endif
+
+# if defined(O_NONBLOCK) && O_NONBLOCK != 0
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock)
+                {
+                    new_oflags |= O_NONBLOCK;
+                }
+                else
+                {
+                    new_oflags &= ~O_NONBLOCK;
+                }
+# else
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
+# endif
+
+# if (defined(O_DSYNC) && O_DSYNC != 0) && (defined(O_SYNC) && O_SYNC != 0) && (defined(O_RSYNC) && O_RSYNC != 0) && ((O_SYNC | O_DSYNC) == O_SYNC) &&         \
+     (O_RSYNC == O_SYNC)
+                // On Android, O_SYNC is a superset of O_DSYNC, and O_RSYNC == O_SYNC. Requesting SYNC or RSYNC implies O_SYNC.
+                if(((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) ==
+                    ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) ||
+                   ((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
+                    ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync))
+                {
+                    new_oflags |= O_SYNC;
+                }
+                else if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
+                        ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
+                {
+                    new_oflags |= O_DSYNC;
+                }
+                else
+                {
+                    new_oflags &= ~(O_SYNC | O_DSYNC);
+                }
+# elif (defined(O_DSYNC) && O_DSYNC != 0) && (defined(O_SYNC) && O_SYNC != 0) && ((O_SYNC | O_DSYNC) == O_SYNC)
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync)
+                {
+                    new_oflags |= O_SYNC;
+                }
+                else if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
+                        ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
+                {
+                    new_oflags |= O_DSYNC;
+                }
+                else
+                {
+                    new_oflags &= ~O_SYNC;
+                }
+
+#  if defined(O_RSYNC) && O_RSYNC != 0
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync)
+                {
+                    new_oflags |= O_RSYNC;
+                }
+                else
+                {
+                    new_oflags &= ~O_RSYNC;
+                }
+#  else
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
+#  endif
+# elif (defined(O_SYNC) && O_SYNC != 0) && (defined(O_RSYNC) && O_RSYNC != 0) && (O_RSYNC == O_SYNC)
+                if(((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) ==
+                    ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) ||
+                   ((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
+                    ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync))
+                {
+                    new_oflags |= O_SYNC;
+                }
+                else
+                {
+                    new_oflags &= ~O_SYNC;
+                }
+
+#  if defined(O_DSYNC) && O_DSYNC != 0
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
+                {
+                    new_oflags |= O_DSYNC;
+                }
+                else
+                {
+                    new_oflags &= ~O_DSYNC;
+                }
+#  else
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
+#  endif
+# else
+                // default
+#  if defined(O_DSYNC) && O_DSYNC != 0
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
+                {
+                    new_oflags |= O_DSYNC;
+                }
+                else
+                {
+                    new_oflags &= ~O_DSYNC;
+                }
+#  else
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
+#  endif
+
+#  if defined(O_RSYNC) && O_RSYNC != 0
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync)
+                {
+                    new_oflags |= O_RSYNC;
+                }
+                else
+                {
+                    new_oflags &= ~O_RSYNC;
+                }
+#  else
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
+#  endif
+
+#  if defined(O_SYNC) && O_SYNC != 0
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync)
+                {
+                    new_oflags |= O_SYNC;
+                }
+                else
+                {
+                    new_oflags &= ~O_SYNC;
+                }
+#  else
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
+#  endif
+# endif
+
+# if defined(__linux__) && defined(__NR_fcntl)
+                int const set_res{::fast_io::system_call<__NR_fcntl, int>(curr_dir_file_native_handle, F_SETFL, new_oflags)};
+
+                if(::fast_io::linux_system_call_fails(set_res)) [[unlikely]]
+                {
+                    int const err{static_cast<int>(-set_res)};
+                    switch(err)
+                    {
+                        // If "ebadf" appears here, it is caused by a WASI implementation issue. This differs from WASI's 'ebadf'; here, "eio" is used instead.
+                        case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                        case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
+                        case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eacces;
+                        case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eperm;
+                        case EINTR: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eintr;
+                        default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                    }
+                }
+
+                // Verify that the flags were actually set by reading them back
+                int const verify_flags{::fast_io::system_call<__NR_fcntl, int>(curr_dir_file_native_handle, F_GETFL)};
+                if(::fast_io::linux_system_call_fails(verify_flags)) [[unlikely]]
+                {
+                    int const err{static_cast<int>(-verify_flags)};
+                    switch(err)
+                    {
+                        case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                        case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
+                        default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                    }
+                }
+
+                // Check if the WASI-managed flags match what we expected
+                int wasi_managed_flags{};
+                int actual_wasi_flags{};
+
+#  if defined(O_APPEND) && O_APPEND != 0
+                wasi_managed_flags |= (new_oflags & O_APPEND);
+                actual_wasi_flags |= (verify_flags & O_APPEND);
+#  endif
+
+#  if defined(O_NONBLOCK) && O_NONBLOCK != 0
+                wasi_managed_flags |= (new_oflags & O_NONBLOCK);
+                actual_wasi_flags |= (verify_flags & O_NONBLOCK);
+#  endif
+
+#  if defined(O_DSYNC) && O_DSYNC != 0
+                wasi_managed_flags |= (new_oflags & O_DSYNC);
+                actual_wasi_flags |= (verify_flags & O_DSYNC);
+#  endif
+
+#  if defined(O_RSYNC) && O_RSYNC != 0
+                wasi_managed_flags |= (new_oflags & O_RSYNC);
+                actual_wasi_flags |= (verify_flags & O_RSYNC);
+#  endif
+
+#  if defined(O_SYNC) && O_SYNC != 0
+                wasi_managed_flags |= (new_oflags & O_SYNC);
+                actual_wasi_flags |= (verify_flags & O_SYNC);
+#  endif
+
+                if(wasi_managed_flags != actual_wasi_flags) [[unlikely]]
+                {
+                    // Attempt to restore
+                    int const set_res{::fast_io::system_call<__NR_fcntl, int>(curr_dir_file_native_handle, F_SETFL, curr_flags)};
+                    if(::fast_io::linux_system_call_fails(set_res)) [[unlikely]]
+                    {
+                        // eio: An I/O exception occurred that we cannot control or recover from (e.g., rollback failure, sporadic F_GETFL failure, etc.).
+                        return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                    }
+                    else
+                    {
+                        // enotsup: The requested semantics are unsupported, and we guarantee behavior that “appears atomic” to the caller (either no change or
+                        // a rollback).
+                        return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                    }
+                }
+
+# else
+                int const set_res{::uwvm2::imported::wasi::wasip1::func::posix::fcntl(curr_dir_file_native_handle, F_SETFL, new_oflags)};
+
+                if(set_res == -1) [[unlikely]]
+                {
+                    switch(errno)
+                    {
+                        // If "ebadf" appears here, it is caused by a WASI implementation issue. This differs from WASI's 'ebadf'; here, "eio" is used instead.
+                        case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                        case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
+                        case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eacces;
+                        case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eperm;
+                        case EINTR: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eintr;
+                        default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                    }
+                }
+
+                // Verify that the flags were actually set by reading them back
+                int const verify_flags{::uwvm2::imported::wasi::wasip1::func::posix::fcntl(curr_dir_file_native_handle, F_GETFL)};
+                if(verify_flags == -1) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio; }
+
+                // Check if the WASI-managed flags match what we expected
+                int wasi_managed_flags{};
+                int actual_wasi_flags{};
+
+#  if defined(O_APPEND) && O_APPEND != 0
+                wasi_managed_flags |= (new_oflags & O_APPEND);
+                actual_wasi_flags |= (verify_flags & O_APPEND);
+#  endif
+
+#  if defined(O_NONBLOCK) && O_NONBLOCK != 0
+                wasi_managed_flags |= (new_oflags & O_NONBLOCK);
+                actual_wasi_flags |= (verify_flags & O_NONBLOCK);
+#  endif
+
+#  if defined(O_DSYNC) && O_DSYNC != 0
+                wasi_managed_flags |= (new_oflags & O_DSYNC);
+                actual_wasi_flags |= (verify_flags & O_DSYNC);
+#  endif
+
+#  if defined(O_RSYNC) && O_RSYNC != 0
+                wasi_managed_flags |= (new_oflags & O_RSYNC);
+                actual_wasi_flags |= (verify_flags & O_RSYNC);
+#  endif
+
+#  if defined(O_SYNC) && O_SYNC != 0
+                wasi_managed_flags |= (new_oflags & O_SYNC);
+                actual_wasi_flags |= (verify_flags & O_SYNC);
+#  endif
+
+                if(wasi_managed_flags != actual_wasi_flags) [[unlikely]]
+                {
+                    // Attempt to restore
+                    int const set_res{::uwvm2::imported::wasi::wasip1::func::posix::fcntl(curr_dir_file_native_handle, F_SETFL, curr_flags)};
+                    if(set_res == -1) [[unlikely]]
+                    {
+                        // eio: An I/O exception occurred that we cannot control or recover from (e.g., rollback failure, sporadic F_GETFL failure, etc.).
+                        return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                    }
+                    else
+                    {
+                        // enotsup: The requested semantics are unsupported, and we guarantee behavior that “appears atomic” to the caller (either no change or
+                        // a rollback).
+                        return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                    }
+                }
+
+# endif
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess;
+#else
+                // Systems that do not support modifying file attributes mid-process
+
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
+
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
+
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
+
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
+
+                if((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync) ==
+                   ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync)
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
+
+                // When the system does not support modifying file attributes at all, passing flags set to 0 indicates success.
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess;
+#endif
+            }
+#if defined(_WIN32) && !defined(__CYGWIN__)
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::socket:
+            {
+                auto const& socket_fd{curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.socket_fd};
+                auto const socket_fd_handle{socket_fd.native_handle()};
+
+                // For ws2, support for setting nonblock is available.
+                // Since the flags on ws2 are fixed and confirmed, there is no need to perform verification again after configuration.
+                if((flags & (::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_append |
+                             ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_dsync |
+                             ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_rsync |
+                             ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_sync)) != ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t{})
+                    [[unlikely]]
+                {
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotsup;
+                }
+
+                ::std::uint_least32_t mode{
+                    static_cast<::std::uint_least32_t>((flags & ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock) ==
+                                                       ::uwvm2::imported::wasi::wasip1::abi::fdflags_wasm64_t::fdflag_nonblock)};
+
+                if(::fast_io::win32::ioctlsocket(socket_fd_handle, 0x8004'667El /*FIONBIO*/, ::std::addressof(mode)) == -1) [[unlikely]]
+                {
+                    switch(::fast_io::win32::WSAGetLastError())
+                    {
+                        case 10022 /*WSAEINVAL*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
+                        case 10004 /*WSAEINTR*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eintr;
+                        case 10038 /*WSAENOTSOCK*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::ebadf;
+                        case 10013 /*WSAEACCES*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eacces;
+                        default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+                    }
+                }
+
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess;
+            }
+#endif
+            [[unlikely]] default:
+            {
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+            }
+        }
+
+        return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess;
     }
 }  // namespace uwvm2::imported::wasi::wasip1::func
 
