@@ -55,7 +55,11 @@ int main()
     {
         auto& fd1{*env.fd_storage.opens.index_unchecked(1uz).fd_p};
         fd1.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        fd1.wasi_fd.ptr->wasi_fd_storage.storage.file_fd = ::fast_io::native_file{u8"test_fd_close_wasm64.tmp", ::fast_io::open_mode::out};
+        fd1.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
+#if defined(_WIN32) && !defined(__CYGWIN__)
+            .file
+#endif
+            = ::fast_io::native_file{u8"test_fd_close_wasm64.tmp", ::fast_io::open_mode::out};
         fd1.rights_base = static_cast<rights_t>(-1);
 
         auto const ret = ::uwvm2::imported::wasi::wasip1::func::fd_close_wasm64(env, static_cast<wasi_posix_fd_wasm64_t>(1));
@@ -70,7 +74,11 @@ int main()
     {
         auto& fd2{*env.fd_storage.opens.index_unchecked(2uz).fd_p};
         fd2.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        fd2.wasi_fd.ptr->wasi_fd_storage.storage.file_fd = ::fast_io::native_file{u8"test_fd_close_wasm64.tmp", ::fast_io::open_mode::out};
+        fd2.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
+#if defined(_WIN32) && !defined(__CYGWIN__)
+            .file
+#endif
+            = ::fast_io::native_file{u8"test_fd_close_wasm64.tmp", ::fast_io::open_mode::out};
         fd2.rights_base = static_cast<rights_t>(-1);
 
         auto const first = ::uwvm2::imported::wasi::wasip1::func::fd_close_wasm64(env, static_cast<wasi_posix_fd_wasm64_t>(2));
