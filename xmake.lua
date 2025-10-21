@@ -107,6 +107,9 @@ function def_build()
 			add_cxflags(llvm_target_cvt, {force = true})
 			add_ldflags(llvm_target_cvt, {force = true})
 		end
+
+		-- Since neither LLVM nor Wextra supports this parameter by default, this addition prevents compilation.
+		add_cxflags("-Wimplicit-fallthrough", {force = true})
     end
 
 	before_build(
