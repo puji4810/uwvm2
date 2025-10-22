@@ -242,7 +242,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             if(path_len > ::std::numeric_limits<::std::size_t>::max()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enobufs; }
         }
 
-        auto const preloaded_dir_ptr{curr_dir_stack.dir_stack.back_unchecked().ptr};
+        auto const preloaded_dir_ptr{curr_dir_stack.dir_stack.front_unchecked().ptr};
         if(preloaded_dir_ptr == nullptr) [[unlikely]]
         {
 #if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
