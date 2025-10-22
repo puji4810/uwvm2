@@ -75,9 +75,16 @@ int main()
         auto& fde = *env.fd_storage.opens.index_unchecked(4uz).fd_p;
         fde.rights_base = static_cast<rights_wasm64_t>(-1);
         fde.rights_inherit = static_cast<rights_wasm64_t>(-1);
-        fde.file_fd = ::fast_io::native_file{u8"test_fd_read_wasm64_regular.tmp",
-                                             ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat |
-                                                 ::fast_io::open_mode::no_block};
+        fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
+#if defined(_WIN32) && !defined(__CYGWIN__)
+        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file = ::fast_io::native_file{
+            u8"test_fd_read_wasm64_regular.tmp",
+            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat | ::fast_io::open_mode::no_block};
+#else
+        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd = ::fast_io::native_file{
+            u8"test_fd_read_wasm64_regular.tmp",
+            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat | ::fast_io::open_mode::no_block};
+#endif
 
         // Write content using fd_pwrite_wasm64 at offset 0
         constexpr char const hello[] = "Hello";
@@ -163,9 +170,16 @@ int main()
         auto& fde = *env.fd_storage.opens.index_unchecked(5uz).fd_p;
         fde.rights_base = static_cast<rights_wasm64_t>(-1);
         fde.rights_inherit = static_cast<rights_wasm64_t>(-1);
-        fde.file_fd = ::fast_io::native_file{u8"test_fd_read_wasm64_zero.tmp",
-                                             ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat |
-                                                 ::fast_io::open_mode::no_block};
+        fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
+#if defined(_WIN32) && !defined(__CYGWIN__)
+        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file = ::fast_io::native_file{
+            u8"test_fd_read_wasm64_zero.tmp",
+            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat | ::fast_io::open_mode::no_block};
+#else
+        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd = ::fast_io::native_file{
+            u8"test_fd_read_wasm64_zero.tmp",
+            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat | ::fast_io::open_mode::no_block};
+#endif
 
         constexpr wasi_void_ptr_wasm64_t iovs_ptr{128u};
         constexpr wasi_void_ptr_wasm64_t nread0_ptr{4100u};
@@ -191,10 +205,19 @@ int main()
     {
         auto& fde = *env.fd_storage.opens.index_unchecked(6uz).fd_p;
         // rights default 0
-        fde.file_fd = ::fast_io::native_file{u8"test_fd_read_wasm64_rights.tmp",
-                                             ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat |
-                                                 ::fast_io::open_mode::no_block};
-        ::fast_io::io::print(fde.file_fd, "data");
+        fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
+#if defined(_WIN32) && !defined(__CYGWIN__)
+        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file = ::fast_io::native_file{
+            u8"test_fd_read_wasm64_rights.tmp",
+            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat | ::fast_io::open_mode::no_block};
+        auto& file_fd = fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file;
+#else
+        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd = ::fast_io::native_file{
+            u8"test_fd_read_wasm64_rights.tmp",
+            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat | ::fast_io::open_mode::no_block};
+        auto& file_fd = fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd;
+#endif
+        ::fast_io::io::print(file_fd, "data");
 
         constexpr wasi_void_ptr_wasm64_t iovs_ptr{5200u};
         constexpr wasi_void_ptr_wasm64_t buf{5000u};
@@ -222,7 +245,12 @@ int main()
         auto& fde = *env.fd_storage.opens.index_unchecked(7uz).fd_p;
         fde.rights_base = static_cast<rights_wasm64_t>(-1);
         fde.rights_inherit = static_cast<rights_wasm64_t>(-1);
-        fde.file_fd = ::fast_io::native_file{u8".", ::fast_io::open_mode::in | ::fast_io::open_mode::directory};
+        fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
+# if defined(_WIN32) && !defined(__CYGWIN__)
+        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file = ::fast_io::native_file{u8".", ::fast_io::open_mode::in | ::fast_io::open_mode::directory};
+# else
+        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd = ::fast_io::native_file{u8".", ::fast_io::open_mode::in | ::fast_io::open_mode::directory};
+# endif
 
         constexpr wasi_void_ptr_wasm64_t iovs_ptr{6200u};
         constexpr wasi_void_ptr_wasm64_t buf{6000u};
