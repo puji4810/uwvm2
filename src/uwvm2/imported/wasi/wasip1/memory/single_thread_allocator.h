@@ -71,7 +71,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::memory
                                                        ::std::size_t wasm_bytes) noexcept
     {
         // Conduct a full inspection of the memory.
-        auto const memory_begin{memory.memory_begin};
+        [[maybe_unused]] auto const memory_begin{memory.memory_begin};
 
 #if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
         if(memory_begin == nullptr) [[unlikely]]

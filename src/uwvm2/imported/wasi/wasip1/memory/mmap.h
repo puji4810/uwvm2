@@ -75,7 +75,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::memory
 
         // Base address must exist once initialized
         // In an mmap environment, the memory beginning remains constant.
-        auto const memory_begin{memory.memory_begin};
+        [[maybe_unused]] auto const memory_begin{memory.memory_begin};
 
 # if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
         // Since this is a path frequently accessed during WASM execution, we should strive to avoid branches related to the virtual machine's own bug
