@@ -200,20 +200,75 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 
         // Rights check: Can be used forever, with no permission restrictions.
 
+        // If ptr is null, it indicates an attempt to open a closed file. However, the preceding check for close pos already prevents such closed files from
+        // being processed, making this a virtual machine implementation error.
+        if(curr_fd.wasi_fd.ptr == nullptr) [[unlikely]]
+        {
+// This will be checked at runtime.
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+            ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+            return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+        }
+
+        switch(curr_fd.wasi_fd.ptr->wasi_fd_storage.type)
+        {
+            [[unlikely]] case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::null:
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+            }
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file:
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotdir;
+            }
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::dir:
+            {
+                break;
+            }
+#if defined(_WIN32) && !defined(__CYGWIN__)
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::socket:
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotdir;
+            }
+#endif
+            [[unlikely]] default:
+            {
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+            }
+        }
+
         // If it is not a pre-opened directory, even if it is a directory, it returns enotdir.
-        if(curr_fd.preloaded_dir.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotdir; }
+        // Retrieve the current directory, which is the top element of the directory stack.
+        auto const& curr_dir_stack{curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.dir_stack};
+        if(curr_dir_stack.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio; }
+        if(!curr_dir_stack.is_preload_dir()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotdir; }
 
         if constexpr(::std::numeric_limits<::uwvm2::imported::wasi::wasip1::abi::wasi_size_t>::max() > ::std::numeric_limits<::std::size_t>::max())
         {
             if(path_len > ::std::numeric_limits<::std::size_t>::max()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enobufs; }
         }
 
-        if(path_len < curr_fd.preloaded_dir.size()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enobufs; }
+        auto const preloaded_dir_ptr{curr_dir_stack.dir_stack.back_unchecked().ptr};
+        if(preloaded_dir_ptr == nullptr) [[unlikely]]
+        {
+// This will be checked at runtime.
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+            ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+            return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+        }
+
+        auto const& preloaded_dir_name{preloaded_dir_ptr->dir_stack.name};
+
+        if(path_len < preloaded_dir_name.size()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enobufs; }
 
         ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm32(memory,
                                                                             path,
-                                                                            reinterpret_cast<::std::byte const*>(curr_fd.preloaded_dir.cbegin()),
-                                                                            reinterpret_cast<::std::byte const*>(curr_fd.preloaded_dir.cend()));
+                                                                            reinterpret_cast<::std::byte const*>(preloaded_dir_name.cbegin()),
+                                                                            reinterpret_cast<::std::byte const*>(preloaded_dir_name.cend()));
 
         return ::uwvm2::imported::wasi::wasip1::abi::errno_t::esuccess;
     }
