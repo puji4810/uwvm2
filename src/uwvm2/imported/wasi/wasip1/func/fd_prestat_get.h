@@ -216,12 +216,67 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 
         // Rights check: Can be used forever, with no permission restrictions.
 
+                // If ptr is null, it indicates an attempt to open a closed file. However, the preceding check for close pos already prevents such closed files from
+        // being processed, making this a virtual machine implementation error.
+        if(curr_fd.wasi_fd.ptr == nullptr) [[unlikely]]
+        {
+// This will be checked at runtime.
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+            ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+            return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+        }
+
+        switch(curr_fd.wasi_fd.ptr->wasi_fd_storage.type)
+        {
+            [[unlikely]] case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::null:
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+            }
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file:
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotdir;
+            }
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::dir:
+            {
+                break;
+            }
+#if defined(_WIN32) && !defined(__CYGWIN__)
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::socket:
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotdir;
+            }
+#endif
+            [[unlikely]] default:
+            {
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+            }
+        }
+
         // If it is not a pre-opened directory, even if it is a directory, it returns enotdir.
-        if(curr_fd.preloaded_dir.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotdir; }
+        // Retrieve the current directory, which is the top element of the directory stack.
+        auto const& curr_dir_stack{curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.dir_stack};
+        if(curr_dir_stack.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio; }
+        if(!curr_dir_stack.is_preload_dir()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotdir; }    
+
+        auto const preloaded_dir_ptr{curr_dir_stack.dir_stack.front_unchecked().ptr};
+        if(preloaded_dir_ptr == nullptr) [[unlikely]]
+        {
+// This will be checked at runtime.
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+            ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+            return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+        }
+
+        auto const& preloaded_dir_name{preloaded_dir_ptr->dir_stack.name};
 
         if constexpr(::std::numeric_limits<::std::size_t>::max() > ::std::numeric_limits<::uwvm2::imported::wasi::wasip1::abi::wasi_size_t>::max())
         {
-            if(curr_fd.preloaded_dir.size() > ::std::numeric_limits<::uwvm2::imported::wasi::wasip1::abi::wasi_size_t>::max()) [[unlikely]]
+            if(preloaded_dir_name.size() > ::std::numeric_limits<::uwvm2::imported::wasi::wasip1::abi::wasi_size_t>::max()) [[unlikely]]
             {
                 return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eoverflow;
             }
@@ -232,9 +287,10 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         if constexpr(is_default_wasi_prestat_data_layout())
         {
             // If the memory is identical, it is copied directly, which is the most efficient approach.
-            wasi_prestat_t tmp_wasi_prestat;  // no initialize
+            // Zero-initialize to avoid copying any indeterminate padding bytes into guest memory.
+            wasi_prestat_t tmp_wasi_prestat{};
             tmp_wasi_prestat.pr_type = ::uwvm2::imported::wasi::wasip1::abi::preopentype_t::preopentype_dir;
-            tmp_wasi_prestat.u.dir.pr_name_len = static_cast<::uwvm2::imported::wasi::wasip1::abi::wasi_size_t>(curr_fd.preloaded_dir.size());
+            tmp_wasi_prestat.u.dir.pr_name_len = static_cast<::uwvm2::imported::wasi::wasip1::abi::wasi_size_t>(preloaded_dir_name.size());
 
             ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm32_unchecked(
                 memory,
@@ -254,7 +310,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             ::uwvm2::imported::wasi::wasip1::memory::store_basic_wasm_type_to_memory_wasm32_unchecked(
                 memory,
                 buf_ptrsz + 4u,
-                static_cast<::uwvm2::imported::wasi::wasip1::abi::wasi_size_t>(curr_fd.preloaded_dir.size()));
+                static_cast<::uwvm2::imported::wasi::wasip1::abi::wasi_size_t>(preloaded_dir_name.size()));
         }
 
         return ::uwvm2::imported::wasi::wasip1::abi::errno_t::esuccess;

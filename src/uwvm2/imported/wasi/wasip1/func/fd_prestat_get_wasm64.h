@@ -148,6 +148,10 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         ::uwvm2::utils::mutex::mutex_merely_release_guard_t curr_fd_release_guard{};
 
         {
+            // Prevent operations to obtain the size or perform resizing at this time.
+            // Only a lock is required when acquiring the unique pointer for the file descriptor. The lock can be released once the acquisition is complete.
+            // Since the file descriptor's location is fixed and accessed via the unique pointer,
+
             // Simply acquiring data using a shared_lock
             ::uwvm2::utils::mutex::rw_shared_guard_t fds_lock{wasm_fd_storage.fds_rwlock};
 
@@ -192,7 +196,11 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             }
 #endif
 
-            // see wasm32 version for detailed rationale about locking order
+            // Other threads will definitely lock fds_rwlock when performing close operations (since they need to access the fd vector). If the current thread
+            // is performing, no other thread can be executing any close operations simultaneously, eliminating any destruction issues. Therefore,
+            // acquiring the lock at this point is safe. However, the problem arises when, immediately after acquiring the lock and before releasing the manager
+            // lock and beginning fd operations, another thread executes a deletion that removes this fd. Subsequent operations by the current thread would then
+            // encounter issues. Thus, locking must occur before releasing fds_rwlock.
             curr_fd_release_guard.device_p = ::std::addressof(curr_wasi_fd_t_p->fd_mutex);
             curr_fd_release_guard.lock();
 
@@ -208,12 +216,67 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 
         // Rights check: Can be used forever, with no permission restrictions.
 
+        // If ptr is null, it indicates an attempt to open a closed file. However, the preceding check for close pos already prevents such closed files from
+        // being processed, making this a virtual machine implementation error.
+        if(curr_fd.wasi_fd.ptr == nullptr) [[unlikely]]
+        {
+// This will be checked at runtime.
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+            ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+        }
+
+        switch(curr_fd.wasi_fd.ptr->wasi_fd_storage.type)
+        {
+            [[unlikely]] case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::null:
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+            }
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file:
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotdir;
+            }
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::dir:
+            {
+                break;
+            }
+#if defined(_WIN32) && !defined(__CYGWIN__)
+            case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::socket:
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotdir;
+            }
+#endif
+            [[unlikely]] default:
+            {
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+            }
+        }
+
         // If it is not a pre-opened directory, even if it is a directory, it returns enotdir.
-        if(curr_fd.preloaded_dir.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotdir; }
+        // Retrieve the current directory, which is the top element of the directory stack.
+        auto const& curr_dir_stack{curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.dir_stack};
+        if(curr_dir_stack.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio; }
+        if(!curr_dir_stack.is_preload_dir()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotdir; }
+
+        auto const preloaded_dir_ptr{curr_dir_stack.dir_stack.front_unchecked().ptr};
+        if(preloaded_dir_ptr == nullptr) [[unlikely]]
+        {
+// This will be checked at runtime.
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+            ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+            return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
+        }
+
+        auto const& preloaded_dir_name{preloaded_dir_ptr->dir_stack.name};
 
         if constexpr(::std::numeric_limits<::std::size_t>::max() > ::std::numeric_limits<::uwvm2::imported::wasi::wasip1::abi::wasi_size_wasm64_t>::max())
         {
-            if(curr_fd.preloaded_dir.size() > ::std::numeric_limits<::uwvm2::imported::wasi::wasip1::abi::wasi_size_wasm64_t>::max()) [[unlikely]]
+            if(preloaded_dir_name.size() > ::std::numeric_limits<::uwvm2::imported::wasi::wasip1::abi::wasi_size_wasm64_t>::max()) [[unlikely]]
             {
                 return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eoverflow;
             }
@@ -224,9 +287,10 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         if constexpr(is_default_wasi_prestat_wasm64_data_layout())
         {
             // If the memory is identical, it is copied directly, which is the most efficient approach.
-            wasi_prestat_wasm64_t tmp_wasi_prestat;  // no initialize
+            // Zero-initialize to avoid copying any indeterminate padding bytes into guest memory.
+            wasi_prestat_wasm64_t tmp_wasi_prestat{};
             tmp_wasi_prestat.pr_type = ::uwvm2::imported::wasi::wasip1::abi::preopentype_wasm64_t::preopentype_dir;
-            tmp_wasi_prestat.u.dir.pr_name_len = static_cast<::uwvm2::imported::wasi::wasip1::abi::wasi_size_wasm64_t>(curr_fd.preloaded_dir.size());
+            tmp_wasi_prestat.u.dir.pr_name_len = static_cast<::uwvm2::imported::wasi::wasip1::abi::wasi_size_wasm64_t>(preloaded_dir_name.size());
 
             ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64_unchecked(
                 memory,
@@ -246,7 +310,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             ::uwvm2::imported::wasi::wasip1::memory::store_basic_wasm_type_to_memory_wasm64_unchecked(
                 memory,
                 buf_ptrsz + 8u,
-                static_cast<::uwvm2::imported::wasi::wasip1::abi::wasi_size_wasm64_t>(curr_fd.preloaded_dir.size()));
+                static_cast<::uwvm2::imported::wasi::wasip1::abi::wasi_size_wasm64_t>(preloaded_dir_name.size()));
         }
 
         return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess;
