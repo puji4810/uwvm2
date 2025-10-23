@@ -154,7 +154,15 @@ int main()
         }
 
         // ensure a/ exists, then descend: stack = [root, a]
-        ::fast_io::native_mkdirat(::fast_io::at_fdcwd(), u8"a");
+        try
+        {
+            ::fast_io::native_mkdirat(::fast_io::at_fdcwd(), u8"a");
+        }
+        catch(...)
+        {
+            return 0;
+        }
+
         {
             ::uwvm2::imported::wasi::wasip1::fd_manager::dir_stack_entry_ref_t entry{};
             entry.ptr->dir_stack.file = ::fast_io::dir_file{u8"a"};
@@ -202,6 +210,15 @@ int main()
             auto const dino =
                 ::uwvm2::imported::wasi::wasip1::memory::get_basic_wasm_type_from_memory_wasm64<wasi_size_wasm64_t>(memory, buf_ptr2 + second_header_off + 8u);
             if(dino != static_cast<wasi_size_wasm64_t>(0u)) { ::fast_io::fast_terminate(); }
+        }
+
+        // cleanup a/
+        try
+        {
+            ::fast_io::native_unlinkat(::fast_io::at_fdcwd(), u8"a", ::fast_io::native_at_flags::removedir);
+        }
+        catch(...)
+        {
         }
     }
 
