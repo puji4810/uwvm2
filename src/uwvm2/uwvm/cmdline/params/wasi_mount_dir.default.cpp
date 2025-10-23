@@ -27,6 +27,7 @@
 #include <cstdlib>
 #include <limits>
 #include <utility>
+#include <atomic>
 // macro
 #include <uwvm2/utils/macro/push_macros.h>
 #include <uwvm2/uwvm/utils/ansies/uwvm_color_push_macro.h>
@@ -604,6 +605,51 @@ namespace uwvm2::uwvm::cmdline::params::details
 
         // Record into default_wasi_env (own the string, then move)
         env.mount_dir_roots.emplace_back(::uwvm2::utils::container::u8string{wasidir_norm}, ::std::move(entry));
+
+        // posix: safe (native fd)
+        // windows nt: safe (native handle)
+        // windows 9x: unsafe (VxD does not provide directory handles, and multitasking exacerbates the TOCTOU problem.)
+        // djgpp: safe (Due to single-task mode + full DJGPP control)
+        
+#if defined(_WIN32) && defined(_WIN32_WINDOWS)
+        if(::uwvm2::uwvm::io::show_toctou_warning)
+        {
+            // show warning
+            static ::std::atomic<bool> warned{};  // [global]
+
+            bool const already_warned{warned.exchange(true, ::std::memory_order_relaxed)};
+            if(!already_warned) [[unlikely]]
+            {
+                ::fast_io::io::perr(
+                    ::uwvm2::uwvm::io::u8log_output,
+                    // 1
+                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL_AND_SET_WHITE),
+                    u8"uwvm: ",
+                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_YELLOW),
+                    u8"[warn]  ",
+                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
+                    u8"Due to system limitations in Windows 9x, using the `dir` function may lead to a TOCTOU security vulnerability, potentially causing a sandbox escape. ",
+                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_ORANGE),
+                    u8"(toctou)\n",
+                    ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL));
+
+                if(::uwvm2::uwvm::io::toctou_warning_fatal) [[unlikely]]
+                {
+                    ::fast_io::io::perr(::uwvm2::uwvm::io::u8log_output,
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL_AND_SET_WHITE),
+                                        u8"uwvm: ",
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_LT_RED),
+                                        u8"[fatal] ",
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
+                                        u8"Convert warnings to fatal errors. ",
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_ORANGE),
+                                        u8"(toctou)\n\n",
+                                        ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL));
+                    ::fast_io::fast_terminate();
+                }
+            }
+        }
+#endif
 
         return ::uwvm2::utils::cmdline::parameter_return_type::def;
     }

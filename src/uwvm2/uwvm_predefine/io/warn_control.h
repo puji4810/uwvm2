@@ -43,6 +43,9 @@ UWVM_MODULE_EXPORT namespace uwvm2::uwvm::io
 # if defined(_WIN32) && !defined(_WIN32_WINDOWS)
     inline bool show_nt_path_warning{true};  // [global]
 # endif
+# if defined(_WIN32) && defined(_WIN32_WINDOWS)
+    inline bool show_toctou_warning{true};  // [global]
+# endif
 
     /// @brief wtrap control
     inline bool vm_warning_fatal{};            // [global]
@@ -52,6 +55,9 @@ UWVM_MODULE_EXPORT namespace uwvm2::uwvm::io
     inline bool depend_warning_fatal{};        // [global]
 # if defined(_WIN32) && !defined(_WIN32_WINDOWS)
     inline bool nt_path_warning_fatal{};  // [global]
+# endif
+# if defined(_WIN32) && defined(_WIN32_WINDOWS)
+    inline bool toctou_warning_fatal{};  // [global]
 # endif
 
 }  // namespace uwvm2::uwvm::io

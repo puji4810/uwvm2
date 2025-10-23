@@ -63,6 +63,9 @@ UWVM_MODULE_EXPORT namespace uwvm2::uwvm::cmdline::params
 #if defined(_WIN32) && !defined(_WIN32_WINDOWS)
             u8"|nt-path"
 #endif
+#if defined(_WIN32) && defined(_WIN32_WINDOWS)
+            u8"|toctou"
+#endif
             u8"]"
         },
         .alias{::uwvm2::utils::cmdline::kns_u8_str_scatter_t{::std::addressof(details::log_convert_warn_to_fatal_alias), 1uz}},

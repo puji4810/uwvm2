@@ -100,6 +100,9 @@ namespace uwvm2::uwvm::cmdline::params::details
 #if defined(_WIN32) && !defined(_WIN32_WINDOWS)
             ::uwvm2::uwvm::io::show_nt_path_warning = false;
 #endif
+#if defined(_WIN32) && defined(_WIN32_WINDOWS)
+            ::uwvm2::uwvm::io::show_toctou_warning = false;
+#endif
         }
         else if(currp1_str == u8"vm") { ::uwvm2::uwvm::io::show_vm_warning = false; }
         else if(currp1_str == u8"parser") { ::uwvm2::uwvm::io::show_parser_warning = false; }
@@ -108,6 +111,9 @@ namespace uwvm2::uwvm::cmdline::params::details
         else if(currp1_str == u8"depend") { ::uwvm2::uwvm::io::show_depend_warning = false; }
 #if defined(_WIN32) && !defined(_WIN32_WINDOWS)
         else if(currp1_str == u8"nt-path") { ::uwvm2::uwvm::io::show_nt_path_warning = false; }
+#endif
+#if defined(_WIN32) && defined(_WIN32_WINDOWS)
+        else if(currp1_str == u8"toctou") { ::uwvm2::uwvm::io::show_toctou_warning = false; }
 #endif
         else
         {
