@@ -58,12 +58,15 @@ int main()
         auto &fde = *env.fd_storage.opens.index_unchecked(4uz).fd_p;
         fde.rights_base = static_cast<rights_wasm64_t>(-1);
         fde.rights_inherit = static_cast<rights_wasm64_t>(-1);
-#if defined(_WIN32) && defined(_WIN32_WINDOWS)
-        fde.file_type = ::uwvm2::imported::wasi::wasip1::fd_manager::win32_wasi_fd_typesize_t::dir;
-        fde.dir_fd = ::fast_io::win32_9xa_dir_file{u8"."};
-#else
-        fde.file_fd = ::fast_io::native_file{u8".", ::fast_io::open_mode::in | ::fast_io::open_mode::directory};
-#endif
+
+        // initialize as directory in new fd model
+        fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::dir);
+        auto &dir_stack = fde.wasi_fd.ptr->wasi_fd_storage.storage.dir_stack;
+        {
+            ::uwvm2::imported::wasi::wasip1::fd_manager::dir_stack_entry_ref_t entry{};
+            entry.ptr->dir_stack.file = ::fast_io::dir_file{u8"."};
+            dir_stack.dir_stack.push_back(::std::move(entry));
+        }
 
         constexpr wasi_void_ptr_wasm64_t buf_ptr{8192u};
         constexpr wasi_void_ptr_wasm64_t used_ptr{4096u};
@@ -84,12 +87,15 @@ int main()
     {
         auto &fde = *env.fd_storage.opens.index_unchecked(5uz).fd_p;
         // rights default 0
-#if defined(_WIN32) && defined(_WIN32_WINDOWS)
-        fde.file_type = ::uwvm2::imported::wasi::wasip1::fd_manager::win32_wasi_fd_typesize_t::dir;
-        fde.dir_fd = ::fast_io::win32_9xa_dir_file{u8"."};
-#else
-        fde.file_fd = ::fast_io::native_file{u8".", ::fast_io::open_mode::in | ::fast_io::open_mode::directory};
-#endif
+
+        // initialize as directory in new fd model
+        fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::dir);
+        auto &dir_stack = fde.wasi_fd.ptr->wasi_fd_storage.storage.dir_stack;
+        {
+            ::uwvm2::imported::wasi::wasip1::fd_manager::dir_stack_entry_ref_t entry{};
+            entry.ptr->dir_stack.file = ::fast_io::dir_file{u8"."};
+            dir_stack.dir_stack.push_back(::std::move(entry));
+        }
 
         constexpr wasi_void_ptr_wasm64_t buf_ptr{16384u};
         constexpr wasi_void_ptr_wasm64_t used_ptr{12288u};
