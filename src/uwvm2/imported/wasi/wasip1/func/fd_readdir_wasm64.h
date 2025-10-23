@@ -307,13 +307,13 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         ::fast_io::win32::nt::io_status_block isb;
 
         constexpr bool zw{false};
-        auto const status{::fast_io::win32::nt::nt_query_information_file<zw>(curr_fd_native_file.native_handle(),
+        auto const query_status{::fast_io::win32::nt::nt_query_information_file<zw>(curr_fd_native_file.native_handle(),
                                                                               ::std::addressof(isb),
                                                                               ::std::addressof(fbi),
                                                                               static_cast<::std::uint_least32_t>(sizeof(fbi)),
                                                                               ::fast_io::win32::nt::file_information_class::FileBasicInformation)};
 
-        if(status) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio; }
+        if(query_status) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio; }
 
         if((fbi.FileAttributes & 0x00000010 /*FILE_ATTRIBUTE_DIRECTORY*/) != 0x00000010) [[unlikely]]
         {
