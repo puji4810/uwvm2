@@ -369,6 +369,10 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                 {
                     if(!::fast_io::win32::SetFileTime(curr_fd_native_handle, nullptr, pAccess, pWrite)) [[unlikely]]
                     {
+                        // Not all file systems can record creation and last access times, and not all file systems record them in the same way. For example, on
+                        // FAT, the resolution for creation time is 10 milliseconds, for write time it is 2 seconds, and for access time it is 1 day (access
+                        // date). NTFS delays updating the last access time of a file for up to one hour after the last access.
+                        
                         switch(::fast_io::win32::GetLastError())
                         {
                             // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here, “eio” is used
