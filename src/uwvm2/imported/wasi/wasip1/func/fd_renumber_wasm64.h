@@ -1,4 +1,3 @@
-﻿
 /*************************************************************
  * Ultimate WebAssembly Virtual Machine (Version 2)          *
  * Copyright (c) 2025-present UlteSoft. All rights reserved. *
@@ -62,14 +61,14 @@
 
 UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 {
-    /// @brief     WasiPreview1.fd_renumber
+    /// @brief     WasiPreview1.fd_renumber (wasm64)
     /// @details   __wasi_errno_t fd_renumber(__wasi_fd_t fd_from, __wasi_fd_t fd_to);
     /// @note      Renumber a file descriptor.
 
-    ::uwvm2::imported::wasi::wasip1::abi::errno_t fd_renumber(
+    ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t fd_renumber_wasm64(
         ::uwvm2::imported::wasi::wasip1::environment::wasip1_environment<::uwvm2::object::memory::linear::native_memory_t> & env,
-        ::uwvm2::imported::wasi::wasip1::abi::wasi_posix_fd_t fd_from,
-        ::uwvm2::imported::wasi::wasip1::abi::wasi_posix_fd_t fd_to) noexcept
+        ::uwvm2::imported::wasi::wasip1::abi::wasi_posix_fd_wasm64_t fd_from,
+        ::uwvm2::imported::wasi::wasip1::abi::wasi_posix_fd_wasm64_t fd_to) noexcept
     {
         auto const trace_wasip1_call{env.trace_wasip1_call};
 
@@ -84,7 +83,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                 ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
                                 u8"wasip1: ",
                                 ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_YELLOW),
-                                u8"fd_renumber",
+                                u8"fd_renumber_wasm64",
                                 ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
                                 u8"(",
                                 ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_LT_GREEN),
@@ -99,12 +98,12 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                 u8"(wasi-trace)\n",
                                 ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL));
 #else
-            ::fast_io::io::perr(::fast_io::u8err(), u8"uwvm: [info]  wasip1: fd_renumber(", fd_from, u8", ", fd_to, u8") (wasi-trace)\n");
+            ::fast_io::io::perr(::fast_io::u8err(), u8"uwvm: [info]  wasip1: fd_renumber_wasm64(", fd_from, u8", ", fd_to, u8") (wasi-trace)\n");
 #endif
         }
 
         // The negative value fd is invalid, and this check prevents subsequent undefined behavior.
-        if(fd_from < 0 || fd_to < 0) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::ebadf; }
+        if(fd_from < 0 || fd_to < 0) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::ebadf; }
 
         auto& wasm_fd_storage{env.fd_storage};
 
@@ -113,7 +112,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         // Since the file descriptor's location is fixed and accessed via the unique pointer,
 
         // Negative states have been excluded, so the conversion result will only be positive numbers.
-        using unsigned_fd_t = ::std::make_unsigned_t<::uwvm2::imported::wasi::wasip1::abi::wasi_posix_fd_t>;
+        using unsigned_fd_t = ::std::make_unsigned_t<::uwvm2::imported::wasi::wasip1::abi::wasi_posix_fd_wasm64_t>;
         auto const unsigned_fd_from{static_cast<unsigned_fd_t>(fd_from)};
         auto const unsigned_fd_to{static_cast<unsigned_fd_t>(fd_to)};
 
@@ -121,7 +120,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         constexpr auto size_t_max{::std::numeric_limits<::std::size_t>::max()};
         if constexpr(::std::numeric_limits<unsigned_fd_t>::max() > size_t_max)
         {
-            if(unsigned_fd_from > size_t_max || unsigned_fd_to > size_t_max) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::ebadf; }
+            if(unsigned_fd_from > size_t_max || unsigned_fd_to > size_t_max) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::ebadf; }
         }
 
         auto const fd_opens_pos_from{static_cast<::std::size_t>(unsigned_fd_from)};
@@ -141,7 +140,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             {
                 valid = wasm_fd_storage.renumber_map.find(fd_from) != wasm_fd_storage.renumber_map.end();
             }
-            return valid ? ::uwvm2::imported::wasi::wasip1::abi::errno_t::esuccess : ::uwvm2::imported::wasi::wasip1::abi::errno_t::ebadf;
+            return valid ? ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess : ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::ebadf;
         }
 
         // Preserve the move of fd_from
@@ -190,14 +189,14 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                 }
                 else [[unlikely]]
                 {
-                    return ::uwvm2::imported::wasi::wasip1::abi::errno_t::ebadf;
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::ebadf;
                 }
             }
             else
             {
                 // If the file has been closed, it cannot be obtained.
                 auto& fd_uniptr{wasm_fd_storage.opens.index_unchecked(fd_opens_pos_from)};
-                if(fd_uniptr.fd_p->close_pos != SIZE_MAX) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::ebadf; }
+                if(fd_uniptr.fd_p->close_pos != SIZE_MAX) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::ebadf; }
 
                 // release
                 curr_fd_p_from = fd_uniptr.release();
@@ -249,7 +248,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     // Use while loop to avoid iterator invalidation during erase
                     for(;;)
                     {
-                        auto it2{wasm_fd_storage.renumber_map.find(static_cast<::uwvm2::imported::wasi::wasip1::abi::wasi_posix_fd_t>(open_size))};
+                        auto it2{wasm_fd_storage.renumber_map.find(static_cast<::uwvm2::imported::wasi::wasip1::abi::wasi_posix_fd_wasm64_t>(open_size))};
                         if(it2 == wasm_fd_storage.renumber_map.end()) { break; }
 
                         wasm_fd_storage.opens.push_back(it2->second.release());
@@ -302,7 +301,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         // Delayed destruction of displaced fd to avoid UB during lock-held destruction
         if(displaced_fd_p) { ::uwvm2::imported::wasi::wasip1::fd_manager::destroy_wasi_fd(displaced_fd_p); }
 
-        return ::uwvm2::imported::wasi::wasip1::abi::errno_t::esuccess;
+        return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::esuccess;
     }
 }  // namespace uwvm2::imported::wasi::wasip1::func
 
@@ -311,4 +310,6 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 # include <uwvm2/utils/macro/pop_macros.h>
 # include <uwvm2/uwvm_predefine/utils/ansies/uwvm_color_pop_macro.h>
 #endif
+
+
 

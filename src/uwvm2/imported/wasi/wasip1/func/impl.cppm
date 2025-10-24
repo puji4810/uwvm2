@@ -65,7 +65,8 @@ export import :fd_read_wasm64;
 export import :fd_read;
 export import :fd_readdir_wasm64;
 export import :fd_readdir;
-
+export import :fd_renumber_wasm64;
+export import :fd_renumber;
 
 #ifndef UWVM_MODULE
 # define UWVM_MODULE

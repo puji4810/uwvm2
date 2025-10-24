@@ -589,7 +589,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
         }
     };
 
-    /// @brief Provided for fd_renumber. For certain systems and file types, the system's dup function may not be usable.
+    /// @brief Provided for dup/dup2. For certain systems and file types, the system's dup function may not be usable.
+    /// @note  This is a reserved feature, but it will not be used in wasip1 because renumbering involves moving rather than copying.
     struct wasi_fd_rc_t
     {
         ::std::atomic_size_t refcount{};
@@ -711,6 +712,14 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
         inline ~wasi_fd_t() = default;
     };
 
+    inline constexpr void destroy_wasi_fd(wasi_fd_t * fd_p) noexcept
+    {
+        using wasi_fd_t_fast_io_type_allocator = ::fast_io::native_typed_global_allocator<wasi_fd_t>;
+
+        ::std::destroy_at(fd_p);
+        wasi_fd_t_fast_io_type_allocator::deallocate_n(fd_p, 1uz);
+    }
+
     struct wasi_fd_unique_ptr_t UWVM_TRIVIALLY_RELOCATABLE_IF_ELIGIBLE
     {
         using wasi_fd_t_fast_io_type_allocator = ::fast_io::native_typed_global_allocator<wasi_fd_t>;
@@ -722,6 +731,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
             this->fd_p = wasi_fd_t_fast_io_type_allocator::allocate(1uz);
             ::new(this->fd_p) wasi_fd_t{};
         }
+
+        inline constexpr wasi_fd_unique_ptr_t(wasi_fd_t* fd_p_o) noexcept : fd_p{fd_p_o} {}
 
         inline constexpr wasi_fd_unique_ptr_t(wasi_fd_unique_ptr_t const&) noexcept = delete;
         inline constexpr wasi_fd_unique_ptr_t& operator= (wasi_fd_unique_ptr_t const&) noexcept = delete;
@@ -757,6 +768,33 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::fd_manager
 
                 this->fd_p = nullptr;
             }
+        }
+
+        inline constexpr wasi_fd_t* release() noexcept
+        {
+            auto const ret{this->fd_p};
+            this->fd_p = nullptr;
+            return ret;
+        }
+
+        inline constexpr void reconstruct() noexcept
+        {
+            if(!this->fd_p) [[likely]]
+            {
+                this->fd_p = wasi_fd_t_fast_io_type_allocator::allocate(1uz);
+                ::new(this->fd_p) wasi_fd_t{};
+            }
+        }
+
+        inline constexpr void clear_destroy_and_assign(wasi_fd_t* fd_p_o) noexcept
+        {
+            if(this->fd_p) [[likely]]
+            {
+                ::std::destroy_at(this->fd_p);
+                wasi_fd_t_fast_io_type_allocator::deallocate_n(this->fd_p, 1uz);
+            }
+
+            this->fd_p = fd_p_o;
         }
 
         inline constexpr ~wasi_fd_unique_ptr_t()
