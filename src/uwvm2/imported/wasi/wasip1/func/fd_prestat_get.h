@@ -216,7 +216,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 
         // Rights check: Can be used forever, with no permission restrictions.
 
-                // If ptr is null, it indicates an attempt to open a closed file. However, the preceding check for close pos already prevents such closed files from
+        // If ptr is null, it indicates an attempt to open a closed file. However, the preceding check for close pos already prevents such closed files from
         // being processed, making this a virtual machine implementation error.
         if(curr_fd.wasi_fd.ptr == nullptr) [[unlikely]]
         {
@@ -260,7 +260,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         // Retrieve the current directory, which is the top element of the directory stack.
         auto const& curr_dir_stack{curr_fd.wasi_fd.ptr->wasi_fd_storage.storage.dir_stack};
         if(curr_dir_stack.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio; }
-        if(!curr_dir_stack.is_preload_dir()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotdir; }    
+        if(!curr_dir_stack.is_preload_dir()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotdir; }
 
         auto const preloaded_dir_ptr{curr_dir_stack.dir_stack.front_unchecked().ptr};
         if(preloaded_dir_ptr == nullptr) [[unlikely]]

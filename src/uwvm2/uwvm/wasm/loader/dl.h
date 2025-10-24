@@ -216,8 +216,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::uwvm::wasm::loader
                                     u8"\": ",
                                     e,
                                     ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL),
-                                    u8"\n"
-                );
+                                    u8"\n");
 
                 return load_dl_rtl::load_error;
             }

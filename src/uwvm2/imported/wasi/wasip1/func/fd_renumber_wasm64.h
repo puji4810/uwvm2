@@ -120,7 +120,10 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         constexpr auto size_t_max{::std::numeric_limits<::std::size_t>::max()};
         if constexpr(::std::numeric_limits<unsigned_fd_t>::max() > size_t_max)
         {
-            if(unsigned_fd_from > size_t_max || unsigned_fd_to > size_t_max) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::ebadf; }
+            if(unsigned_fd_from > size_t_max || unsigned_fd_to > size_t_max) [[unlikely]]
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::ebadf;
+            }
         }
 
         auto const fd_opens_pos_from{static_cast<::std::size_t>(unsigned_fd_from)};
@@ -310,6 +313,4 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 # include <uwvm2/utils/macro/pop_macros.h>
 # include <uwvm2/uwvm_predefine/utils/ansies/uwvm_color_pop_macro.h>
 #endif
-
-
 
