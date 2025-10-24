@@ -232,7 +232,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             }
             case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::dir:
             {
-                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eisdir;
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::espipe;
             }
 #if defined(_WIN32) && !defined(__CYGWIN__)
             case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::socket:
@@ -294,6 +294,14 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             }
         }
 
+        if constexpr(::std::numeric_limits<underlying_offset_type_t>::lowest() < ::std::numeric_limits<::fast_io::intfpos_t>::lowest())
+        {
+            if(underlying_offset < ::std::numeric_limits<::fast_io::intfpos_t>::lowest())
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eoverflow;
+            }
+        }
+
         ::fast_io::intfpos_t const int_fpos{static_cast<::fast_io::intfpos_t>(underlying_offset)};
 
         ::fast_io::intfpos_t new_offset_fpos;  // no initialize
@@ -350,7 +358,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                         case 232uz /*ERROR_NO_DATA*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::epipe;
                         case 8uz /*ERROR_NOT_ENOUGH_MEMORY*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enomem;
                         case 14uz /*ERROR_OUTOFMEMORY*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enomem;
-                        case 267uz /*ERROR_DIRECTORY*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eisdir;
+                        case 267uz /*ERROR_DIRECTORY*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::espipe;
                         default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
                     }
 
@@ -410,7 +418,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                         case 0xC000000Euz /* STATUS_NO_SUCH_DEVICE */: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enoent;
                         case 0xC0000101uz /* STATUS_DIRECTORY_NOT_EMPTY */: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotempty;
                         case 0xC0000281uz /* STATUS_DIRECTORY_IS_A_REPARSE_POINT */: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
-                        case 0xC00000BAuz /* STATUS_FILE_IS_A_DIRECTORY */: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eisdir;
+                        case 0xC00000BAuz /* STATUS_FILE_IS_A_DIRECTORY */: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::espipe;
                         case 0xC000009Auz /* STATUS_INSUFFICIENT_RESOURCES */: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enomem;
                         case 0xC0000017uz /* STATUS_NO_MEMORY */: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enomem;
                         default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
@@ -449,7 +457,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                 case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
                 case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eacces;
                 case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eperm;
-                case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eisdir;
+                case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::espipe;
                 case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::erofs;
 #  if defined(EDQUOT)
                 case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::edquot;
