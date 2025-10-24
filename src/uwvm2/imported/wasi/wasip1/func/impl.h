@@ -67,5 +67,7 @@
 # include "fd_readdir.h"
 # include "fd_renumber_wasm64.h"
 # include "fd_renumber.h"
+# include "fd_seek_wasm64.h"
+# include "fd_seek.h"
 
 #endif
