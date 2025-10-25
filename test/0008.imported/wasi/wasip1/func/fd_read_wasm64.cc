@@ -79,11 +79,11 @@ int main()
 #if defined(_WIN32) && !defined(__CYGWIN__)
         fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file = ::fast_io::native_file{
             u8"test_fd_read_wasm64_regular.tmp",
-            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat | ::fast_io::open_mode::no_block};
+            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat};
 #else
         fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd = ::fast_io::native_file{
             u8"test_fd_read_wasm64_regular.tmp",
-            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat | ::fast_io::open_mode::no_block};
+            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat};
 #endif
 
         // Write content using fd_pwrite_wasm64 at offset 0
