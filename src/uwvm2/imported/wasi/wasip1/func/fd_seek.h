@@ -243,6 +243,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             }
             case ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::dir:
             {
+                // WASI Preview requires returning espipe for unaddressable descriptors.
                 return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
             }
 #if defined(_WIN32) && !defined(__CYGWIN__)
