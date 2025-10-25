@@ -170,7 +170,7 @@ int main()
         }
     }
 
-    // Directory fd -> eisdir (current implementation)
+    // Directory fd -> espipe (current implementation)
     {
         auto &fde = *env.fd_storage.opens.index_unchecked(6uz).fd_p;
         fde.rights_base = static_cast<rights_t>(-1);
@@ -183,7 +183,7 @@ int main()
                                                                         static_cast<filedelta_t>(0),
                                                                         whence_t::whence_set,
                                                                         new_off_ptr);
-        if(ret != errno_t::eisdir)
+        if(ret != errno_t::espipe)
         {
             ::fast_io::io::perrln(::fast_io::u8err(), u8"fd_seek: expected eisdir for directory fd");
             ::fast_io::fast_terminate();

@@ -161,7 +161,7 @@ int main()
         if(ret != errno_wasm64_t::enotcapable) { ::fast_io::fast_terminate(); }
     }
 
-    // Directory fd -> eisdir (current implementation)
+    // Directory fd -> espipe (current implementation)
     {
         auto &fde = *env.fd_storage.opens.index_unchecked(6uz).fd_p;
         fde.rights_base = static_cast<rights_wasm64_t>(-1);
@@ -174,7 +174,7 @@ int main()
                                                                                static_cast<filedelta_wasm64_t>(0),
                                                                                whence_wasm64_t::whence_set,
                                                                                new_off_ptr);
-        if(ret != errno_wasm64_t::eisdir) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::espipe) { ::fast_io::fast_terminate(); }
     }
 
     return 0;
