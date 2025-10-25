@@ -71,6 +71,8 @@ export import :fd_seek_wasm64;
 export import :fd_seek;
 export import :fd_sync_wasm64;
 export import :fd_sync;
+export import :fd_tell_wasm64;
+export import :fd_tell;
 
 #ifndef UWVM_MODULE
 # define UWVM_MODULE

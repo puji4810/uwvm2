@@ -38,9 +38,10 @@ module;
 #if !defined(_WIN32)
 # include <errno.h>
 # include <unistd.h>
+# include <sys/stat.h>
 #endif
 
-export module uwvm2.imported.wasi.wasip1.func:fd_tell;
+export module uwvm2.imported.wasi.wasip1.func:fd_tell_wasm64;
 
 import fast_io;
 import uwvm2.uwvm_predefine.utils.ansies;
@@ -62,5 +63,6 @@ import :posix;
 # define UWVM_MODULE_EXPORT export
 #endif
 
-#include "fd_tell.h"
+#include "fd_tell_wasm64.h"
+
 
