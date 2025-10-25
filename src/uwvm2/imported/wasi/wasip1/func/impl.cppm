@@ -69,6 +69,8 @@ export import :fd_renumber_wasm64;
 export import :fd_renumber;
 export import :fd_seek_wasm64;
 export import :fd_seek;
+export import :fd_sync_wasm64;
+export import :fd_sync;
 
 #ifndef UWVM_MODULE
 # define UWVM_MODULE

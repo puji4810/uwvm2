@@ -42,7 +42,7 @@ module;
 # include <sys/stat.h>
 #endif
 
-export module uwvm2.imported.wasi.wasip1.func:fd_sync;
+export module uwvm2.imported.wasi.wasip1.func:fd_sync_wasm64;
 
 import fast_io;
 import uwvm2.uwvm_predefine.utils.ansies;
@@ -64,5 +64,6 @@ import :posix;
 # define UWVM_MODULE_EXPORT export
 #endif
 
-#include "fd_sync.h"
+#include "fd_sync_wasm64.h"
+
 
