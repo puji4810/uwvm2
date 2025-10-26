@@ -185,14 +185,21 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         }
     };
 
-    inline constexpr ::uwvm2::utils::container::vector<::uwvm2::utils::container::u8string> normalize(::uwvm2::utils::container::u8string_view path) noexcept
+    // The path series functions of wasi cannot traverse paths beyond the specified path, not the preopen path.
+    struct normalize_res_t
+    {
+        ::uwvm2::utils::container::vector<::uwvm2::utils::container::u8string> res{};
+        bool is_valid{};
+    };
+
+    inline constexpr normalize_res_t normalize(::uwvm2::utils::container::u8string_view path) noexcept
     {
         if(!path.empty() && path.front_unchecked() == u8'/') { return {}; }
 
         // Prevent subsequent operations from exceeding boundaries
         if(path.size() == ::std::numeric_limits<::std::size_t>::max()) [[unlikely]] { return {}; }
 
-        ::uwvm2::utils::container::vector<::uwvm2::utils::container::u8string> result{};
+        normalize_res_t result{};
 
         ::std::size_t i{};
         while(i < path.size())
@@ -210,17 +217,19 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             }
             else if(token == u8"..")
             {
-                if(result.empty()) [[unlikely]] { return {}; }
-                result.pop_back_unchecked();
+                if(result.res.empty()) [[unlikely]] { return {}; }
+                result.res.pop_back_unchecked();
             }
             else
             {
-                result.push_back(token);
+                result.res.push_back(::uwvm2::utils::container::u8string{token});
             }
 
             i = j + 1uz;
         }
 
+        result.is_valid = true;
+        
         return result;
     }
 }  // namespace uwvm2::imported::wasi::wasip1::func
