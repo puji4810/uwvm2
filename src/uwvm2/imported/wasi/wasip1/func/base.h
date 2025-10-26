@@ -184,6 +184,45 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             allocator::deallocate(ptr);
         }
     };
+
+    inline constexpr ::uwvm2::utils::container::vector<::uwvm2::utils::container::u8string> normalize(::uwvm2::utils::container::u8string_view path) noexcept
+    {
+        if(!path.empty() && path.front_unchecked() == u8'/') { return {}; }
+
+        // Prevent subsequent operations from exceeding boundaries
+        if(path.size() == ::std::numeric_limits<::std::size_t>::max()) [[unlikely]] { return {}; }
+
+        ::uwvm2::utils::container::vector<::uwvm2::utils::container::u8string> result{};
+
+        ::std::size_t i{};
+        while(i < path.size())
+        {
+            while(i < path.size() && path[i] == u8'/') { ++i; }
+            if(i == path.size()) { break; }
+
+            ::std::size_t j{i};
+            while(j < path.size() && path[j] != u8'/') { ++j; }
+            ::uwvm2::utils::container::u8string_view token{path.subview_unchecked(i, j - i)};
+
+            if(token == u8".")
+            {
+                // Ignore the current directory
+            }
+            else if(token == u8"..")
+            {
+                if(result.empty()) [[unlikely]] { return {}; }
+                result.pop_back_unchecked();
+            }
+            else
+            {
+                result.push_back(token);
+            }
+
+            i = j + 1uz;
+        }
+
+        return result;
+    }
 }  // namespace uwvm2::imported::wasi::wasip1::func
 
 #ifndef UWVM_MODULE
