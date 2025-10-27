@@ -449,6 +449,7 @@ inline void posix_utimensat_impl(int dirfd, char const *path, unix_timestamp_opt
 template<::std::integral char_type>
 inline ::fast_io::details::basic_ct_string<char_type> posix_readlinkat_impl(int dirfd, char const *pathname)
 {
+#if defined(AT_SYMLINK_NOFOLLOW)
     using posix_ssize_t = ::std::make_signed_t<::std::size_t>;
 
 #if defined(__linux__)
@@ -468,10 +469,10 @@ inline ::fast_io::details::basic_ct_string<char_type> posix_readlinkat_impl(int 
 							__NR_fstatat
 #endif
 							,
-							int>(dirfd, pathname, __builtin_addressof(buf), flags));
+							int>(dirfd, pathname, __builtin_addressof(buf), AT_SYMLINK_NOFOLLOW));
 
 #else
-	if ((::fast_io::posix::libc_fstatat(dirfd, pathname, __builtin_addressof(buf), flags)) < 0)
+	if ((::fast_io::posix::libc_fstatat(dirfd, pathname, __builtin_addressof(buf), AT_SYMLINK_NOFOLLOW)) < 0)
 	{
 		throw_posix_error();
 	}
@@ -479,10 +480,15 @@ inline ::fast_io::details::basic_ct_string<char_type> posix_readlinkat_impl(int 
 
 #else
 	struct ::stat buf;
-	system_call_throw_error(::fast_io::posix::libc_fstatat(dirfd, pathname, __builtin_addressof(buf), flags));
+	system_call_throw_error(::fast_io::posix::libc_fstatat(dirfd, pathname, __builtin_addressof(buf),AT_SYMLINK_NOFOLLOW));
 #endif
 
     auto const symlink_size{static_cast<::std::size_t>(buf.st_size)};
+
+	if (symlink_size == 0u)
+	{
+		return {};
+	}
 
 	if constexpr (::std::same_as<char_type, char>)
 	{
@@ -498,7 +504,7 @@ inline ::fast_io::details::basic_ct_string<char_type> posix_readlinkat_impl(int 
 			
 		system_call_throw_error(readlink_bytes);
 			
-		if(static_cast<::std::size_t>(readlink_bytes) < symlink_size)
+		if(static_cast<::std::size_t>(readlink_bytes) != symlink_size)
 		{
 			throw_posix_error(EIO);
 		}
@@ -507,13 +513,13 @@ inline ::fast_io::details::basic_ct_string<char_type> posix_readlinkat_impl(int 
 	}
 	else 
 	{
-		local_operator_new_array_ptr<char> dynamic_buffer(symlink_size);
+		local_operator_new_array_ptr<char> dynamic_buffer{symlink_size};
 
 		posix_ssize_t readlink_bytes{
 #if defined(__linux__) && defined(__NR_readlinkat)
-							system_call<__NR_readlinkat, posix_ssize_t>(dirfd, pathname, local_operator_new_array_ptr.ptr(), symlink_size)
+							system_call<__NR_readlinkat, posix_ssize_t>(dirfd, pathname, dynamic_buffer.get(), symlink_size)
 #else
-							static_cast<posix_ssize_t>(::fast_io::posix::libc_readlinkat(dirfd, pathname, local_operator_new_array_ptr.ptr(), symlink_size))
+							static_cast<posix_ssize_t>(::fast_io::posix::libc_readlinkat(dirfd, pathname, dynamic_buffer.grt(), symlink_size))
 #endif
 						};
 			
@@ -526,6 +532,10 @@ inline ::fast_io::details::basic_ct_string<char_type> posix_readlinkat_impl(int 
 
 		return ::fast_io::details::concat_ct(::fast_io::mnp::strvw(dynamic_buffer.get(), dynamic_buffer.get() + symlink_size));
 	}
+#else
+	// Since faccessat also requires the AT_SYMLINK_NOFOLLOW flag, it can only result in an error.
+	throw_posix_error(EINVAL);
+#endif
 }
 
 template <posix_api_1x dsp, typename... Args>

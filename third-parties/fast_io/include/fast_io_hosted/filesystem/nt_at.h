@@ -766,6 +766,12 @@ inline void nt_linkat_impl(void *olddirhd, char16_t const *oldpath_c_str, ::std:
 		});
 }
 
+template <bool zw, ::std::integral char_type>
+inline ::fast_io::details::basic_ct_string<char_type> nt_readlinkat_impl(void *olddirhd, char16_t const* path_c_str, ::std::size_t path_size, bool kernel)
+{
+
+}
+
 template <bool zw, ::fast_io::details::posix_api_22 dsp, typename... Args>
 inline auto nt22_api_dispatcher(void *olddirhd, char16_t const *oldpath_c_str, ::std::size_t oldpath_size,
 								void *newdirhd, char16_t const *newpath_c_str, ::std::size_t newpath_size, Args... args)
