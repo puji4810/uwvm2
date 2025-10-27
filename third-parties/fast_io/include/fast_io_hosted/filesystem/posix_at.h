@@ -446,6 +446,78 @@ inline void posix_utimensat_impl(int dirfd, char const *path, unix_timestamp_opt
 		(dirfd, path, tsptr, flags));
 }
 
+template<::std::integral char_type>
+inline ::fast_io::details::basic_ct_string<char_type> posix_readlinkat_impl(int dirfd, char const *pathname)
+{
+    using posix_ssize_t = ::std::make_signed_t<::std::size_t>;
+
+    ::std::size_t bufsize{256u};
+
+    if constexpr(::std::same_as<char_type, char>)
+    {
+        ::fast_io::details::basic_ct_string<char> result{};
+        result.resize(bufsize);
+
+        for(;;)
+        {
+            posix_ssize_t bytes{
+#if defined(__linux__) && defined(__NR_readlinkat)
+                system_call<__NR_readlinkat, posix_ssize_t>(dirfd, pathname, result.data(), bufsize)
+#else
+                static_cast<posix_ssize_t>(::fast_io::posix::libc_readlinkat(dirfd, pathname, result.data(), bufsize))
+#endif
+            };
+
+			system_call_throw_error(bytes);
+
+            if(static_cast<::std::size_t>(bytes) < bufsize)
+            {
+                result.resize(static_cast<::std::size_t>(bytes));
+                return result;
+            }
+
+			if (bufsize > ::std::numeric_limits<posix_ssize_t>::max() / 2u) [[unlikely]]
+			{
+				throw_posix_error(EOVERFLOW);
+			}
+
+            bufsize *= 2u;
+            result.resize(bufsize);
+        }
+    }
+    else
+    {
+        ::fast_io::details::basic_ct_string<char_type> buf(bufsize);
+
+        for(;;)
+        {
+            posix_ssize_t bytes{
+#if defined(__linux__) && defined(__NR_readlinkat)
+                system_call<__NR_readlinkat, posix_ssize_t>(dirfd, pathname, buf.data(), bufsize)
+#else
+                static_cast<posix_ssize_t>(::fast_io::posix::libc_readlinkat(dirfd, pathname, buf.data(), bufsize))
+#endif
+            };
+
+			system_call_throw_error(bytes);
+
+            if(static_cast<::std::size_t>(bytes) < bufsize)
+            {
+                buf.resize(static_cast<::std::size_t>(bytes));
+                return ::fast_io::details::concat_ct(::fast_io::mnp::code_cvt(buf));
+            }
+
+			if (bufsize > ::std::numeric_limits<posix_ssize_t>::max() / 2u) [[unlikely]]
+			{
+				throw_posix_error(EOVERFLOW);
+			}
+
+            bufsize *= 2u;
+            buf.resize(bufsize);
+        }
+    }
+}
+
 template <posix_api_1x dsp, typename... Args>
 inline auto posix1x_api_dispatcher(int dirfd, char const *path, Args... args)
 {
@@ -483,6 +555,15 @@ inline auto posix1x_api_dispatcher(int dirfd, char const *path, Args... args)
 	}
 }
 
+template <::std::integral char_type, posix_api_ct dsp, typename... Args>
+inline auto posixct_api_dispatcher(int dirfd, char const *path, Args... args)
+{
+    if constexpr (dsp == posix_api_ct::readlinkat)
+    {
+        return ::fast_io::posix_readlinkat_impl<char_type>(dirfd, path, args...);
+    }
+}
+
 template <posix_api_22 dsp, ::fast_io::constructible_to_os_c_str old_path_type,
 		  ::fast_io::constructible_to_os_c_str new_path_type, typename... Args>
 inline auto posix_deal_with22(int olddirfd, old_path_type const &oldpath, int newdirfd, new_path_type const &newpath, Args... args)
@@ -511,6 +592,12 @@ template <posix_api_1x dsp, ::fast_io::constructible_to_os_c_str path_type, type
 inline auto posix_deal_with1x(int dirfd, path_type const &path, Args... args)
 {
 	return fast_io::posix_api_common(path, [&](char const *path_c_str) { return posix1x_api_dispatcher<dsp>(dirfd, path_c_str, args...); });
+}
+
+template <::std::integral char_type, posix_api_ct dsp, ::fast_io::constructible_to_os_c_str path_type, typename... Args>
+inline auto posix_deal_withct(int dirfd, path_type const &path, Args... args)
+{
+    return fast_io::posix_api_common(path, [&](char const *path_c_str) { return posixct_api_dispatcher<char_type, dsp>(dirfd, path_c_str, args...); });
 }
 
 } // namespace details
@@ -626,19 +713,7 @@ inline void native_mkdirat(posix_at_entry ent, path_type const &path, perms perm
 {
 	return details::posix_deal_with1x<details::posix_api_1x::mkdirat>(ent.fd, path, static_cast<mode_t>(perm));
 }
-#if 0
-template<::fast_io::constructible_to_os_c_str path_type>
-inline void posix_mknodat(posix_at_entry ent,path_type const& path,perms perm,::std::uintmax_t dev)
-{
-	return details::posix_deal_with1x<details::posix_api_1x::mknodat>(ent.fd,path,static_cast<mode_t>(perm),dev);
-}
 
-template<::fast_io::constructible_to_os_c_str path_type>
-inline void native_mknodat(posix_at_entry ent,path_type const& path,perms perm,::std::uintmax_t dev)
-{
-	return details::posix_deal_with1x<details::posix_api_1x::mknodat>(ent.fd,path,static_cast<mode_t>(perm),dev);
-}
-#endif
 template <::fast_io::constructible_to_os_c_str path_type>
 inline void posix_unlinkat(posix_at_entry ent, path_type const &path, posix_at_flags flags = {})
 {
@@ -684,6 +759,34 @@ inline void native_utimensat(posix_at_entry ent, path_type const &path, unix_tim
 	details::posix_deal_with1x<details::posix_api_1x::utimensat>(ent.fd, path, creation_time, last_access_time,
 																 last_modification_time, static_cast<int>(flags));
 }
+
+// ct
+template <::std::integral char_type, ::fast_io::constructible_to_os_c_str path_type>
+inline ::fast_io::details::basic_ct_string<char_type> posix_readlinkat(posix_at_entry ent, path_type const &path)
+{
+    return details::posix_deal_withct<char_type, details::posix_api_ct::readlinkat>(ent.fd, path);
+}
+
+template <::std::integral char_type, ::fast_io::constructible_to_os_c_str path_type>
+inline ::fast_io::details::basic_ct_string<char_type> native_readlinkat(posix_at_entry ent, path_type const &path)
+{
+    return details::posix_deal_withct<char_type, details::posix_api_ct::readlinkat>(ent.fd, path);
+}
+
+#if 0
+template<::fast_io::constructible_to_os_c_str path_type>
+inline void posix_mknodat(posix_at_entry ent,path_type const& path,perms perm,::std::uintmax_t dev)
+{
+	return details::posix_deal_with1x<details::posix_api_1x::mknodat>(ent.fd,path,static_cast<mode_t>(perm),dev);
+}
+
+template<::fast_io::constructible_to_os_c_str path_type>
+inline void native_mknodat(posix_at_entry ent,path_type const& path,perms perm,::std::uintmax_t dev)
+{
+	return details::posix_deal_with1x<details::posix_api_1x::mknodat>(ent.fd,path,static_cast<mode_t>(perm),dev);
+}
+#endif
+
 #if 0
 template<::std::integral ch_type>
 struct basic_posix_readlinkat_t
