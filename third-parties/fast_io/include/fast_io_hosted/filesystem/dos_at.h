@@ -264,7 +264,7 @@ inline auto dos1x_api_dispatcher(int dirfd, char const *path, Args... args)
 }
 
 template <::std::integral char_type>
-inline ::fast_io::containers::basic_string<char_type> dos_readlinkat_impl(int dirfd, char const *pathname)
+inline ::fast_io::details::basic_ct_string<char_type> dos_readlinkat_impl(int dirfd, char const *pathname)
 {
     // DOS does not support readlink, so you must first verify its validity before throwing a einval exception (not symlink).
     ::fast_io::system_call_throw_error(::fast_io::posix::my_dos_access(::fast_io::details::my_dos_concat_tlc_path(dirfd, pathname).c_str(), 0));
@@ -475,13 +475,13 @@ inline void native_utimensat(posix_at_entry ent, path_type const &path, unix_tim
 }
 
 template <::std::integral char_type, ::fast_io::constructible_to_os_c_str path_type>
-inline ::fast_io::containers::basic_string<char_type> dos_readlinkat(posix_at_entry ent, path_type const &path)
+inline ::fast_io::details::basic_ct_string<char_type> dos_readlinkat(posix_at_entry ent, path_type const &path)
 {
 	return ::fast_io::details::dos_deal_withct<char_type, ::fast_io::details::posix_api_ct::readlinkat>(ent.fd, path);
 }
 
 template <::std::integral char_type, ::fast_io::constructible_to_os_c_str path_type>
-inline ::fast_io::containers::basic_string<char_type> native_readlinkat(posix_at_entry ent, path_type const &path)
+inline ::fast_io::details::basic_ct_string<char_type> native_readlinkat(posix_at_entry ent, path_type const &path)
 {
 	return ::fast_io::details::dos_deal_withct<char_type, ::fast_io::details::posix_api_ct::readlinkat>(ent.fd, path);
 }

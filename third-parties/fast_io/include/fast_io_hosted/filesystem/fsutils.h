@@ -65,9 +65,11 @@ find_dot_and_sep(char_type const *beg_ptr, ::std::size_t namlen) noexcept
 	}
 }
 
+template <::std::integral char_type>
+using basic_ct_string = ::fast_io::container::basic_string<char_type>;
+
 template <::std::integral char_type, typename... Args>
-::fast_io::containers::basic_string<char_type>
-concat_ct(Args &&...args)
+inline constexpr basic_ct_string<char_type> concat_ct(Args &&...args)
 {
 	constexpr bool type_error{::fast_io::operations::defines::print_freestanding_okay<::fast_io::details::dummy_buffer_output_stream<char_type>,Args...>};
 	if constexpr (type_error)
