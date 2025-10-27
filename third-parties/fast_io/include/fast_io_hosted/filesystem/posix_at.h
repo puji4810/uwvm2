@@ -451,71 +451,81 @@ inline ::fast_io::details::basic_ct_string<char_type> posix_readlinkat_impl(int 
 {
     using posix_ssize_t = ::std::make_signed_t<::std::size_t>;
 
-    ::std::size_t bufsize{256u};
+#if defined(__linux__)
 
-    if constexpr(::std::same_as<char_type, char>)
-    {
-        ::fast_io::details::basic_ct_string<char> result{};
-        result.resize(bufsize);
-
-        for(;;)
-        {
-            posix_ssize_t bytes{
-#if defined(__linux__) && defined(__NR_readlinkat)
-                system_call<__NR_readlinkat, posix_ssize_t>(dirfd, pathname, result.data(), bufsize)
+#if defined(__USE_LARGEFILE64) && (defined(__NR_newfstatat) || defined(__NR_fstatat64))
+	struct ::stat64 buf;
 #else
-                static_cast<posix_ssize_t>(::fast_io::posix::libc_readlinkat(dirfd, pathname, result.data(), bufsize))
+	struct ::stat buf;
 #endif
-            };
-
-			system_call_throw_error(bytes);
-
-            if(static_cast<::std::size_t>(bytes) < bufsize)
-            {
-                result.resize(static_cast<::std::size_t>(bytes));
-                return result;
-            }
-
-			if (bufsize > ::std::numeric_limits<posix_ssize_t>::max() / 2u) [[unlikely]]
-			{
-				throw_posix_error(EOVERFLOW);
-			}
-
-            bufsize *= 2u;
-            result.resize(bufsize);
-        }
-    }
-    else
-    {
-        ::fast_io::details::basic_ct_string<char_type> buf(bufsize);
-
-        for(;;)
-        {
-            posix_ssize_t bytes{
-#if defined(__linux__) && defined(__NR_readlinkat)
-                system_call<__NR_readlinkat, posix_ssize_t>(dirfd, pathname, buf.data(), bufsize)
+#if defined(__NR_newfstatat) || defined(__NR_fstatat64) || defined(__NR_fstatat)
+	system_call_throw_error(system_call<
+#if defined(__NR_newfstatat)
+							__NR_newfstatat
+#elif defined(__NR_fstatat64)
+							__NR_fstatat64
 #else
-                static_cast<posix_ssize_t>(::fast_io::posix::libc_readlinkat(dirfd, pathname, buf.data(), bufsize))
+							__NR_fstatat
 #endif
-            };
+							,
+							int>(dirfd, pathname, __builtin_addressof(buf), flags));
 
-			system_call_throw_error(bytes);
+#else
+	if ((::fast_io::posix::libc_fstatat(dirfd, pathname, __builtin_addressof(buf), flags)) < 0)
+	{
+		throw_posix_error();
+	}
+#endif
 
-            if(static_cast<::std::size_t>(bytes) < bufsize)
-            {
-                buf.resize(static_cast<::std::size_t>(bytes));
-                return ::fast_io::details::concat_ct(::fast_io::mnp::code_cvt(buf));
-            }
+#else
+	struct ::stat buf;
+	system_call_throw_error(::fast_io::posix::libc_fstatat(dirfd, pathname, __builtin_addressof(buf), flags));
+#endif
 
-			if (bufsize > ::std::numeric_limits<posix_ssize_t>::max() / 2u) [[unlikely]]
-			{
-				throw_posix_error(EOVERFLOW);
-			}
+    auto const symlink_size{static_cast<::std::size_t>(buf.st_size)};
 
-            bufsize *= 2u;
-            buf.resize(bufsize);
-        }
-    }
+	if constexpr (::std::same_as<char_type, char>)
+	{
+		::fast_io::details::basic_ct_string<char> result(symlink_size);
+
+		posix_ssize_t readlink_bytes{
+#if defined(__linux__) && defined(__NR_readlinkat)
+							system_call<__NR_readlinkat, posix_ssize_t>(dirfd, pathname, result.data(), symlink_size)
+#else
+							static_cast<posix_ssize_t>(::fast_io::posix::libc_readlinkat(dirfd, pathname, result.data(), symlink_size))
+#endif
+						};
+			
+		system_call_throw_error(readlink_bytes);
+			
+		if(static_cast<::std::size_t>(readlink_bytes) < symlink_size)
+		{
+			throw_posix_error(EIO);
+		}
+
+		return result;
+	}
+	else 
+	{
+		local_operator_new_array_ptr<char> dynamic_buffer(symlink_size);
+
+		posix_ssize_t readlink_bytes{
+#if defined(__linux__) && defined(__NR_readlinkat)
+							system_call<__NR_readlinkat, posix_ssize_t>(dirfd, pathname, local_operator_new_array_ptr.ptr(), symlink_size)
+#else
+							static_cast<posix_ssize_t>(::fast_io::posix::libc_readlinkat(dirfd, pathname, local_operator_new_array_ptr.ptr(), symlink_size))
+#endif
+						};
+			
+		system_call_throw_error(readlink_bytes);
+			
+		if(static_cast<::std::size_t>(readlink_bytes) != symlink_size) [[unlikely]]
+		{
+			throw_posix_error(EIO);
+		}
+
+		return ::fast_io::details::concat_ct(::fast_io::mnp::strvw(dynamic_buffer.get(), dynamic_buffer.get() + symlink_size));
+	}
 }
 
 template <posix_api_1x dsp, typename... Args>
