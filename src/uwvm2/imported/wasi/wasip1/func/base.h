@@ -186,50 +186,58 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
     };
 
     // The path series functions of wasi cannot traverse paths beyond the specified path, not the preopen path.
-    struct normalize_res_t
+
+    enum class dir_type_e : ::std::uint_fast8_t
     {
-        ::uwvm2::utils::container::vector<::uwvm2::utils::container::u8string> res{};
-        bool is_valid{};
+        curr,
+        prev,
+        next,
     };
 
-    inline constexpr normalize_res_t normalize(::uwvm2::utils::container::u8string_view path) noexcept
+    struct split_path_t
     {
-        if(!path.empty() && path.front_unchecked() == u8'/') { return {}; }
+        ::uwvm2::utils::container::u8string next_name{};
+        dir_type_e dir_type{};
+    };
 
-        // Prevent subsequent operations from exceeding boundaries
+    struct split_path_res_t
+    {
+        ::uwvm2::utils::container::vector<split_path_t> res{};
+        bool is_absolute{};
+    };
+
+    inline constexpr split_path_res_t split_path(::uwvm2::utils::container::u8string_view path) noexcept
+    {
+        split_path_res_t result{};
+
+        // Indicates whether the path is absolute; the leading ‘/’ will be skipped during actual splitting.
+        result.is_absolute = !path.empty() && path.front_unchecked() == u8'/';
+
+        // Prevent extreme cases from exceeding boundaries (almost impossible to hit).
         if(path.size() == ::std::numeric_limits<::std::size_t>::max()) [[unlikely]] { return {}; }
-
-        normalize_res_t result{};
 
         ::std::size_t i{};
         while(i < path.size())
         {
-            while(i < path.size() && path[i] == u8'/') { ++i; }
-            if(i == path.size()) { break; }
+            // Skip consecutive '/'
+            while(i < path.size() && path.index_unchecked(i) == u8'/') { ++i; }
+            if(i >= path.size()) { break; }
 
             ::std::size_t j{i};
-            while(j < path.size() && path[j] != u8'/') { ++j; }
+            while(j < path.size() && path.index_unchecked(j) != u8'/') { ++j; }
             ::uwvm2::utils::container::u8string_view token{path.subview_unchecked(i, j - i)};
 
-            if(token == u8".")
-            {
-                // Ignore the current directory
-            }
-            else if(token == u8"..")
-            {
-                if(result.res.empty()) [[unlikely]] { return {}; }
-                result.res.pop_back_unchecked();
-            }
+            // Precisely identify '.' and '..', otherwise treat as a normal name field.
+            if(token == u8".") { result.res.emplace_back(::uwvm2::utils::container::u8string{}, dir_type_e::curr); }
+            else if(token == u8"..") { result.res.emplace_back(::uwvm2::utils::container::u8string{}, dir_type_e::prev); }
             else
             {
-                result.res.push_back(::uwvm2::utils::container::u8string{token});
+                result.res.emplace_back(::uwvm2::utils::container::u8string{token}, dir_type_e::next);
             }
 
             i = j + 1uz;
         }
 
-        result.is_valid = true;
-        
         return result;
     }
 }  // namespace uwvm2::imported::wasi::wasip1::func

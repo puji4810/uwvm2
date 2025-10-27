@@ -46,6 +46,7 @@
 # endif
 // import
 # include <fast_io.h>
+# include <fast_io_device.h>
 # include <uwvm2/uwvm_predefine/utils/ansies/impl.h>
 # include <uwvm2/uwvm_predefine/io/impl.h>
 # include <uwvm2/utils/mutex/impl.h>
@@ -270,8 +271,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 
         auto const& curr_fd_native_file{curr_dir_stack_entry.ptr->dir_stack.file};
 
-        // check path
-
+        // check path (Copy from WASM memory for use)
         ::uwvm2::utils::container::u8string path{};
 
         {
@@ -283,9 +283,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             using char8_t_const_may_alias_ptr UWVM_GNU_MAY_ALIAS = char8_t const*;
 
             auto const path_begin{memory.memory_begin + path_ptrsz};
-            auto const path_end{path_begin + path_len};
 
-            path.assign(reinterpret_cast<char8_t_const_may_alias_ptr>(path_begin), reinterpret_cast<char8_t_const_may_alias_ptr>(path_end));
+            path.assign(::uwvm2::utils::container::u8string_view{reinterpret_cast<char8_t_const_may_alias_ptr>(path_begin), path_len});
         }
 
         if(path.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval; }
@@ -299,19 +298,35 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eilseq;
         }
 
-        // wasip1: If the path contains traversal components such as /, . or .., this function shall fail with EINVAL or ENOTCAPABLE.
-        ::uwvm2::utils::container::u8string_view
-        // For dot, directly exclude system-dependent APIs to ensure consistent behavior.
-        if(path == u8"." || path == u8"..") [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval; }
+        auto const split_path_res{::uwvm2::imported::wasi::wasip1::func::split_path(::uwvm2::utils::container::u8string_view{path.data(), path.size()})};
 
-        // Only single-layer paths are permitted.
-        for(auto const curr_char: path)
+        // The path series functions in wasip1 reject absolute paths.
+        if(split_path_res.is_absolute) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm; }
+
+        ::uwvm2::utils::container::vector<::fast_io::dir_file> path_stack{};
+        path_stack.reserve(split_path_res.res.size());
+
+        // cend cannot be nullptr
+        auto const split_last{split_path_res.res.cend() - 1u};
+
+        for(auto split_curr{split_path_res.res.cbegin()}; split_curr != split_path_res.res.cend(); ++split_curr)
         {
-#if (defined(_WIN32) || defined(__CYGWIN__)) || (defined(__MSDOS__) || defined(__DJGPP__))
-            if(curr_char == u8'/' || curr_char == u8'\\') [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval; }
-#else
-            if(curr_char == u8'/') [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval; }
-#endif
+            if(split_curr != split_last)
+            {
+                // Create the final path
+
+                if(split_curr->dir_type != ::uwvm2::imported::wasi::wasip1::func::dir_type_e::next) [[unlikely]]
+                {
+                    // Create '.' or '..' directly reject (eexist).
+                    return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eexist;
+                }
+
+                auto const& next_name{split_curr->next_name};
+                
+            }
+            else
+            {
+            }
         }
 
 #ifdef UWVM_CPP_EXCEPTIONS
