@@ -5,6 +5,8 @@ namespace fast_io
 
 namespace posix
 {
+using posix_ssize_t = ::std::make_signed_t<::std::size_t>;
+
 #ifdef __DARWIN_C_LEVEL
 extern int libc_faccessat(int dirfd, char const *pathname, int mode, int flags) noexcept __asm__("_faccessat");
 extern int libc_renameat(int olddirfd, char const *oldpath, int newdirfd, char const *newpath) noexcept
@@ -21,7 +23,7 @@ extern int libc_fstatat(int dirfd, char const *pathname, struct stat *buf, int f
 extern int libc_mkdirat(int dirfd, char const *pathname, mode_t mode) noexcept __asm__("_mkdirat");
 extern int libc_mknodat(int dirfd, char const *pathname, mode_t mode, dev_t dev) noexcept __asm__("_mknodat");
 extern int libc_unlinkat(int dirfd, char const *pathname, int flags) noexcept __asm__("_unlinkat");
-extern int libc_readlinkat(int dirfd, char const *pathname, char *buf, ::std::size_t bufsiz) noexcept
+extern posix_ssize_t libc_readlinkat(int dirfd, char const *pathname, char *buf, ::std::size_t bufsiz) noexcept
 	__asm__("_readlinkat");
 #else
 extern int libc_faccessat(int dirfd, char const *pathname, int mode, int flags) noexcept __asm__("faccessat");
@@ -39,7 +41,7 @@ extern int libc_fstatat(int dirfd, char const *pathname, struct stat *buf, int f
 extern int libc_mkdirat(int dirfd, char const *pathname, mode_t mode) noexcept __asm__("mkdirat");
 extern int libc_mknodat(int dirfd, char const *pathname, mode_t mode, dev_t dev) noexcept __asm__("mknodat");
 extern int libc_unlinkat(int dirfd, char const *pathname, int flags) noexcept __asm__("unlinkat");
-extern int libc_readlinkat(int dirfd, char const *pathname, char *buf, ::std::size_t bufsiz) noexcept
+extern posix_ssize_t libc_readlinkat(int dirfd, char const *pathname, char *buf, ::std::size_t bufsiz) noexcept
 	__asm__("readlinkat");
 #endif
 } // namespace posix
@@ -452,6 +454,8 @@ inline ::fast_io::details::basic_ct_string<char_type> posix_readlinkat_impl(int 
 #if defined(AT_SYMLINK_NOFOLLOW)
     using posix_ssize_t = ::std::make_signed_t<::std::size_t>;
 
+	// The standard POSIX API does not provide a direct interface to call readlink using an fd, so toctou cannot be avoided.
+
 #if defined(__linux__)
 
 #if defined(__USE_LARGEFILE64) && (defined(__NR_newfstatat) || defined(__NR_fstatat64))
@@ -519,7 +523,7 @@ inline ::fast_io::details::basic_ct_string<char_type> posix_readlinkat_impl(int 
 #if defined(__linux__) && defined(__NR_readlinkat)
 							system_call<__NR_readlinkat, posix_ssize_t>(dirfd, pathname, dynamic_buffer.get(), symlink_size)
 #else
-							static_cast<posix_ssize_t>(::fast_io::posix::libc_readlinkat(dirfd, pathname, dynamic_buffer.grt(), symlink_size))
+							static_cast<posix_ssize_t>(::fast_io::posix::libc_readlinkat(dirfd, pathname, dynamic_buffer.get(), symlink_size))
 #endif
 						};
 			
