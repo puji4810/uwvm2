@@ -23,8 +23,7 @@ extern int libc_fstatat(int dirfd, char const *pathname, struct stat *buf, int f
 extern int libc_mkdirat(int dirfd, char const *pathname, mode_t mode) noexcept __asm__("_mkdirat");
 extern int libc_mknodat(int dirfd, char const *pathname, mode_t mode, dev_t dev) noexcept __asm__("_mknodat");
 extern int libc_unlinkat(int dirfd, char const *pathname, int flags) noexcept __asm__("_unlinkat");
-extern posix_ssize_t libc_readlinkat(int dirfd, char const *pathname, char *buf, ::std::size_t bufsiz) noexcept
-	__asm__("_readlinkat");
+extern posix_ssize_t libc_readlinkat(int dirfd, char const *pathname, char *buf, ::std::size_t bufsiz) noexcept __asm__("_readlinkat");
 #else
 extern int libc_faccessat(int dirfd, char const *pathname, int mode, int flags) noexcept __asm__("faccessat");
 extern int libc_renameat(int olddirfd, char const *oldpath, int newdirfd, char const *newpath) noexcept
@@ -41,8 +40,7 @@ extern int libc_fstatat(int dirfd, char const *pathname, struct stat *buf, int f
 extern int libc_mkdirat(int dirfd, char const *pathname, mode_t mode) noexcept __asm__("mkdirat");
 extern int libc_mknodat(int dirfd, char const *pathname, mode_t mode, dev_t dev) noexcept __asm__("mknodat");
 extern int libc_unlinkat(int dirfd, char const *pathname, int flags) noexcept __asm__("unlinkat");
-extern posix_ssize_t libc_readlinkat(int dirfd, char const *pathname, char *buf, ::std::size_t bufsiz) noexcept
-	__asm__("readlinkat");
+extern posix_ssize_t libc_readlinkat(int dirfd, char const *pathname, char *buf, ::std::size_t bufsiz) noexcept __asm__("readlinkat");
 #endif
 } // namespace posix
 
@@ -216,7 +214,7 @@ inline void posix_fchownat_impl(int dirfd, char const *pathname, uintmax_t owner
 	if constexpr (sizeof(uintmax_t) > sizeof(gid_t))
 	{
 		constexpr ::std::uintmax_t mx{::std::numeric_limits<gid_t>::max()};
-		if (static_cast<::std::uintmax_t>(owner) > mx)
+		if (static_cast<::std::uintmax_t>(group) > mx)
 		{
 			throw_posix_error(EOVERFLOW);
 		}
@@ -534,7 +532,7 @@ inline ::fast_io::details::basic_ct_string<char_type> posix_readlinkat_impl(int 
 			throw_posix_error(EIO);
 		}
 
-		return ::fast_io::details::concat_ct(::fast_io::mnp::strvw(dynamic_buffer.get(), dynamic_buffer.get() + symlink_size));
+		return ::fast_io::details::concat_ct<char_type>(::fast_io::mnp::code_cvt(::fast_io::mnp::strvw(dynamic_buffer.get(), dynamic_buffer.get() + symlink_size)));
 	}
 #else
 	// Since faccessat also requires the AT_SYMLINK_NOFOLLOW flag, it can only result in an error.
@@ -584,7 +582,7 @@ inline auto posixct_api_dispatcher(int dirfd, char const *path, Args... args)
 {
     if constexpr (dsp == posix_api_ct::readlinkat)
     {
-        return ::fast_io::posix_readlinkat_impl<char_type>(dirfd, path, args...);
+        return posix_readlinkat_impl<char_type>(dirfd, path, args...);
     }
 }
 
