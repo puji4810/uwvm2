@@ -595,12 +595,20 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     }
                     case ::uwvm2::imported::wasi::wasip1::func::dir_type_e::next:
                     {
+
+                        ::std::size_t symlink_depth{};
+
                         auto symlink_iterative{
-                            [fast_io_error_to_erron](
+                            [fast_io_error_to_erron, &symlink_depth](
                                 this auto&& self,
                                 ::uwvm2::utils::container::vector<::fast_io::dir_file>& curr_path_stack,
                                 ::uwvm2::utils::container::u8string_view symlink_symbol) constexpr noexcept -> ::uwvm2::imported::wasi::wasip1::abi::errno_t
                             {
+                                constexpr ::std::size_t max_symlink_depth{40uz};
+                                if(symlink_depth > max_symlink_depth) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eloop; }
+
+                                ++symlink_depth;
+
                                 if(symlink_symbol.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval; }
 
                                 // WASI does not guarantee that strings are null-terminated, so you must check for zero characters in the middle and construct
@@ -615,6 +623,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                 }
 
                                 auto const split_path_res{::uwvm2::imported::wasi::wasip1::func::split_path(symlink_symbol)};
+
+                                if(split_path_res.is_absolute) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm; }
 
                                 for(auto const& split_curr: split_path_res.res)
                                 {
@@ -679,7 +689,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                                 }
 #endif
 
-                                                curr_path_stack.push_back_unchecked(next);
+                                                curr_path_stack.push_back(next);
                                             }
                                         }
                                         [[unlikely]] default:
@@ -741,7 +751,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                 }
 #endif
 
-                                path_stack.push_back_unchecked(next);
+                                path_stack.push_back(next);
                             }
                         }
                         else
@@ -785,7 +795,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                 }
 #endif
 
-                                path_stack.push_back_unchecked(next);
+                                path_stack.push_back(next);
                             }
                         }
 
