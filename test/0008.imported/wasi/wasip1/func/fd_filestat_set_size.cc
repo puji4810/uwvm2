@@ -39,16 +39,19 @@ int main()
     native_memory_t memory{};
     memory.init_by_page_count(1uz);
 
-    wasip1_environment<native_memory_t> env{.wasip1_memory = ::std::addressof(memory), .argv = {}, .envs = {}, .fd_storage = {}, .mount_dir_roots={}, .trace_wasip1_call = false};
+    wasip1_environment<native_memory_t> env{.wasip1_memory = ::std::addressof(memory),
+                                            .argv = {},
+                                            .envs = {},
+                                            .fd_storage = {},
+                                            .mount_dir_roots = {},
+                                            .trace_wasip1_call = false};
 
     // Prepare fd table
     env.fd_storage.opens.resize(6uz);
 
     // Case 0: negative fd → ebadf
     {
-        auto const ret = ::uwvm2::imported::wasi::wasip1::func::fd_filestat_set_size(env,
-                                                                                      static_cast<wasi_posix_fd_t>(-1),
-                                                                                      static_cast<filesize_t>(0));
+        auto const ret = ::uwvm2::imported::wasi::wasip1::func::fd_filestat_set_size(env, static_cast<wasi_posix_fd_t>(-1), static_cast<filesize_t>(0));
         if(ret != errno_t::ebadf)
         {
             ::fast_io::io::perrln(::fast_io::u8err(), u8"fd_filestat_set_size: expected ebadf for negative fd");
@@ -62,7 +65,8 @@ int main()
         fd4.rights_base = static_cast<rights_t>(-1);
         fd4.rights_inherit = static_cast<rights_t>(-1);
         fd4.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        fd4.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
+        fd4.wasi_fd.ptr->wasi_fd_storage.storage
+            .file_fd
 #if defined(_WIN32) && !defined(__CYGWIN__)
             .file
 #endif
@@ -72,9 +76,7 @@ int main()
 
     // Case 1: success to extend file to 4096
     {
-        auto const ret = ::uwvm2::imported::wasi::wasip1::func::fd_filestat_set_size(env,
-                                                                                      static_cast<wasi_posix_fd_t>(4),
-                                                                                      static_cast<filesize_t>(4096u));
+        auto const ret = ::uwvm2::imported::wasi::wasip1::func::fd_filestat_set_size(env, static_cast<wasi_posix_fd_t>(4), static_cast<filesize_t>(4096u));
         if(ret != errno_t::esuccess)
         {
             ::fast_io::io::perrln(::fast_io::u8err(), u8"fd_filestat_set_size: expected esuccess for regular file");
@@ -82,9 +84,11 @@ int main()
         }
 
         // verify physical size using fast_io::status
-        auto const &nf = env.fd_storage.opens.index_unchecked(4uz).fd_p->wasi_fd.ptr->wasi_fd_storage.storage.file_fd
+        auto const& nf = env.fd_storage.opens.index_unchecked(4uz)
+                             .fd_p->wasi_fd.ptr->wasi_fd_storage.storage
+                             .file_fd
 #if defined(_WIN32) && !defined(__CYGWIN__)
-            .file
+                             .file
 #endif
             ;
         auto const st = status(nf);
@@ -101,16 +105,15 @@ int main()
         fd5.rights_base = static_cast<rights_t>(0);
         fd5.rights_inherit = static_cast<rights_t>(0);
         fd5.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        fd5.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
+        fd5.wasi_fd.ptr->wasi_fd_storage.storage
+            .file_fd
 #if defined(_WIN32) && !defined(__CYGWIN__)
             .file
 #endif
             = ::fast_io::native_file{u8"test_fd_filestat_set_size_rights.tmp",
                                      ::fast_io::open_mode::out | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat};
 
-        auto const ret = ::uwvm2::imported::wasi::wasip1::func::fd_filestat_set_size(env,
-                                                                                      static_cast<wasi_posix_fd_t>(5),
-                                                                                      static_cast<filesize_t>(1024u));
+        auto const ret = ::uwvm2::imported::wasi::wasip1::func::fd_filestat_set_size(env, static_cast<wasi_posix_fd_t>(5), static_cast<filesize_t>(1024u));
         if(ret != errno_t::enotcapable)
         {
             ::fast_io::io::perrln(::fast_io::u8err(), u8"fd_filestat_set_size: expected enotcapable when rights missing");
@@ -124,7 +127,8 @@ int main()
         fde.rights_base = static_cast<rights_t>(-1);
         fde.rights_inherit = static_cast<rights_t>(-1);
         fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
+        fde.wasi_fd.ptr->wasi_fd_storage.storage
+            .file_fd
 #if defined(_WIN32) && !defined(__CYGWIN__)
             .file
 #endif
@@ -138,9 +142,7 @@ int main()
             ::fast_io::fast_terminate();
         }
 
-        auto const ret = ::uwvm2::imported::wasi::wasip1::func::fd_filestat_set_size(env,
-                                                                                      static_cast<wasi_posix_fd_t>(2),
-                                                                                      static_cast<filesize_t>(2048u));
+        auto const ret = ::uwvm2::imported::wasi::wasip1::func::fd_filestat_set_size(env, static_cast<wasi_posix_fd_t>(2), static_cast<filesize_t>(2048u));
         if(ret != errno_t::ebadf)
         {
             ::fast_io::io::perrln(::fast_io::u8err(), u8"fd_filestat_set_size: expected ebadf after fd_close");
@@ -148,6 +150,4 @@ int main()
         }
     }
 }
-
-
 

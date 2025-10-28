@@ -30,12 +30,12 @@
 int main()
 {
     using ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t;
-    using ::uwvm2::imported::wasi::wasip1::abi::rights_wasm64_t;
-    using ::uwvm2::imported::wasi::wasip1::abi::whence_wasm64_t;
     using ::uwvm2::imported::wasi::wasip1::abi::filedelta_wasm64_t;
     using ::uwvm2::imported::wasi::wasip1::abi::filesize_wasm64_t;
+    using ::uwvm2::imported::wasi::wasip1::abi::rights_wasm64_t;
     using ::uwvm2::imported::wasi::wasip1::abi::wasi_posix_fd_wasm64_t;
     using ::uwvm2::imported::wasi::wasip1::abi::wasi_void_ptr_wasm64_t;
+    using ::uwvm2::imported::wasi::wasip1::abi::whence_wasm64_t;
     using ::uwvm2::imported::wasi::wasip1::environment::wasip1_environment;
     using ::uwvm2::object::memory::linear::native_memory_t;
 
@@ -64,20 +64,20 @@ int main()
 
     // Regular file at fd=4
     {
-        auto &fde = *env.fd_storage.opens.index_unchecked(4uz).fd_p;
+        auto& fde = *env.fd_storage.opens.index_unchecked(4uz).fd_p;
         fde.rights_base = static_cast<rights_wasm64_t>(-1);
         fde.rights_inherit = static_cast<rights_wasm64_t>(-1);
         fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
 #if defined(_WIN32) && !defined(__CYGWIN__)
-        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file = ::fast_io::native_file{
-            u8"test_fd_seek_wasm64_regular.tmp",
-            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat};
-        auto &file_fd = fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file;
+        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file =
+            ::fast_io::native_file{u8"test_fd_seek_wasm64_regular.tmp",
+                                   ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat};
+        auto& file_fd = fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file;
 #else
-        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd = ::fast_io::native_file{
-            u8"test_fd_seek_wasm64_regular.tmp",
-            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat};
-        auto &file_fd = fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd;
+        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd =
+            ::fast_io::native_file{u8"test_fd_seek_wasm64_regular.tmp",
+                                   ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat};
+        auto& file_fd = fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd;
 #endif
         ::fast_io::io::print(file_fd, "HelloWorld");
 
@@ -140,16 +140,16 @@ int main()
 
     // Rights check: enotcapable
     {
-        auto &fde = *env.fd_storage.opens.index_unchecked(5uz).fd_p;
+        auto& fde = *env.fd_storage.opens.index_unchecked(5uz).fd_p;
         fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
 #if defined(_WIN32) && !defined(__CYGWIN__)
-        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file = ::fast_io::native_file{
-            u8"test_fd_seek_wasm64_rights.tmp",
-            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat};
+        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file =
+            ::fast_io::native_file{u8"test_fd_seek_wasm64_rights.tmp",
+                                   ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat};
 #else
-        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd = ::fast_io::native_file{
-            u8"test_fd_seek_wasm64_rights.tmp",
-            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat};
+        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd =
+            ::fast_io::native_file{u8"test_fd_seek_wasm64_rights.tmp",
+                                   ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat};
 #endif
 
         constexpr wasi_void_ptr_wasm64_t new_off_ptr{5120u};
@@ -163,7 +163,7 @@ int main()
 
     // Directory fd -> espipe (current implementation)
     {
-        auto &fde = *env.fd_storage.opens.index_unchecked(6uz).fd_p;
+        auto& fde = *env.fd_storage.opens.index_unchecked(6uz).fd_p;
         fde.rights_base = static_cast<rights_wasm64_t>(-1);
         fde.rights_inherit = static_cast<rights_wasm64_t>(-1);
         fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::dir);
@@ -179,5 +179,4 @@ int main()
 
     return 0;
 }
-
 

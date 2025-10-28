@@ -41,7 +41,12 @@ int main()
     native_memory_t memory{};
     memory.init_by_page_count(1uz);
 
-    wasip1_environment<native_memory_t> env{.wasip1_memory = ::std::addressof(memory), .argv = {}, .envs = {}, .fd_storage = {}, .mount_dir_roots={}, .trace_wasip1_call = false};
+    wasip1_environment<native_memory_t> env{.wasip1_memory = ::std::addressof(memory),
+                                            .argv = {},
+                                            .envs = {},
+                                            .fd_storage = {},
+                                            .mount_dir_roots = {},
+                                            .trace_wasip1_call = false};
 
     env.fd_storage.opens.resize(6uz);
 
@@ -70,7 +75,8 @@ int main()
         fd4.rights_base = static_cast<rights_wasm64_t>(-1);
         fd4.rights_inherit = static_cast<rights_wasm64_t>(-1);
         fd4.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        fd4.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
+        fd4.wasi_fd.ptr->wasi_fd_storage.storage
+            .file_fd
 #if defined(_WIN32) && !defined(__CYGWIN__)
             .file
 #endif
@@ -215,7 +221,8 @@ int main()
         fd5.rights_base = static_cast<rights_wasm64_t>(0);
         fd5.rights_inherit = static_cast<rights_wasm64_t>(0);
         fd5.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        fd5.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
+        fd5.wasi_fd.ptr->wasi_fd_storage.storage
+            .file_fd
 #if defined(_WIN32) && !defined(__CYGWIN__)
             .file
 #endif
@@ -241,7 +248,8 @@ int main()
         fde.rights_base = static_cast<rights_wasm64_t>(-1);
         fde.rights_inherit = static_cast<rights_wasm64_t>(-1);
         fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
+        fde.wasi_fd.ptr->wasi_fd_storage.storage
+            .file_fd
 #if defined(_WIN32) && !defined(__CYGWIN__)
             .file
 #endif

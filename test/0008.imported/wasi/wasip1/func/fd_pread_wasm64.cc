@@ -43,18 +43,23 @@
 int main()
 {
     using ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t;
+    using ::uwvm2::imported::wasi::wasip1::abi::filesize_wasm64_t;
     using ::uwvm2::imported::wasi::wasip1::abi::rights_wasm64_t;
     using ::uwvm2::imported::wasi::wasip1::abi::wasi_posix_fd_wasm64_t;
-    using ::uwvm2::imported::wasi::wasip1::abi::wasi_void_ptr_wasm64_t;
     using ::uwvm2::imported::wasi::wasip1::abi::wasi_size_wasm64_t;
-    using ::uwvm2::imported::wasi::wasip1::abi::filesize_wasm64_t;
+    using ::uwvm2::imported::wasi::wasip1::abi::wasi_void_ptr_wasm64_t;
     using ::uwvm2::imported::wasi::wasip1::environment::wasip1_environment;
     using ::uwvm2::object::memory::linear::native_memory_t;
 
     native_memory_t memory{};
     memory.init_by_page_count(1uz);
 
-    wasip1_environment<native_memory_t> env{.wasip1_memory = ::std::addressof(memory), .argv = {}, .envs = {}, .fd_storage = {}, .mount_dir_roots={}, .trace_wasip1_call = false};
+    wasip1_environment<native_memory_t> env{.wasip1_memory = ::std::addressof(memory),
+                                            .argv = {},
+                                            .envs = {},
+                                            .fd_storage = {},
+                                            .mount_dir_roots = {},
+                                            .trace_wasip1_call = false};
 
     env.fd_storage.opens.resize(8uz);
 
@@ -74,19 +79,19 @@ int main()
     }
 
     // Prepare a file with known content
-    constexpr char const content[] = "HelloWorld"; // 10 bytes
+    constexpr char const content[] = "HelloWorld";  // 10 bytes
     {
-        auto &fde = *env.fd_storage.opens.index_unchecked(4uz).fd_p;
+        auto& fde = *env.fd_storage.opens.index_unchecked(4uz).fd_p;
         fde.rights_base = static_cast<rights_wasm64_t>(-1);
         fde.rights_inherit = static_cast<rights_wasm64_t>(-1);
         fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
+        fde.wasi_fd.ptr->wasi_fd_storage.storage
+            .file_fd
 #if defined(_WIN32) && !defined(__CYGWIN__)
             .file
 #endif
             = ::fast_io::native_file{u8"test_fd_pread_wasm64_regular.tmp",
-                                     ::fast_io::open_mode::out | ::fast_io::open_mode::in |
-                                         ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat};
+                                     ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat};
         // write test content into the native file handle
 #if defined(_WIN32) && !defined(__CYGWIN__)
         ::fast_io::io::print(fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file, content);
@@ -105,9 +110,7 @@ int main()
         ::uwvm2::imported::wasi::wasip1::memory::store_basic_wasm_type_to_memory_wasm64(memory,
                                                                                         static_cast<wasi_void_ptr_wasm64_t>(iovs_ptr + 8u),
                                                                                         static_cast<wasi_size_wasm64_t>(5u));
-        ::uwvm2::imported::wasi::wasip1::memory::store_basic_wasm_type_to_memory_wasm64(memory,
-                                                                                        static_cast<wasi_void_ptr_wasm64_t>(iovs_ptr + 16u),
-                                                                                        buf2);
+        ::uwvm2::imported::wasi::wasip1::memory::store_basic_wasm_type_to_memory_wasm64(memory, static_cast<wasi_void_ptr_wasm64_t>(iovs_ptr + 16u), buf2);
         ::uwvm2::imported::wasi::wasip1::memory::store_basic_wasm_type_to_memory_wasm64(memory,
                                                                                         static_cast<wasi_void_ptr_wasm64_t>(iovs_ptr + 24u),
                                                                                         static_cast<wasi_size_wasm64_t>(5u));
@@ -181,16 +184,16 @@ int main()
 
     // Rights check enotcapable
     {
-        auto &fde = *env.fd_storage.opens.index_unchecked(5uz).fd_p;
+        auto& fde = *env.fd_storage.opens.index_unchecked(5uz).fd_p;
         // no rights granted by default
         fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
+        fde.wasi_fd.ptr->wasi_fd_storage.storage
+            .file_fd
 #if defined(_WIN32) && !defined(__CYGWIN__)
             .file
 #endif
             = ::fast_io::native_file{u8"test_fd_pread_wasm64_rights.tmp",
-                                     ::fast_io::open_mode::out | ::fast_io::open_mode::in |
-                                         ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat};
+                                     ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat};
         // write initial data
 #if defined(_WIN32) && !defined(__CYGWIN__)
         ::fast_io::io::print(fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file, "data");
@@ -223,14 +226,15 @@ int main()
 #if !defined(_WIN32)
     // POSIX: directory → eisdir
     {
-        auto &fde = *env.fd_storage.opens.index_unchecked(6uz).fd_p;
+        auto& fde = *env.fd_storage.opens.index_unchecked(6uz).fd_p;
         fde.rights_base = static_cast<rights_wasm64_t>(-1);
         fde.rights_inherit = static_cast<rights_wasm64_t>(-1);
         fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
-#if defined(_WIN32) && !defined(__CYGWIN__)
+        fde.wasi_fd.ptr->wasi_fd_storage.storage
+            .file_fd
+# if defined(_WIN32) && !defined(__CYGWIN__)
             .file
-#endif
+# endif
             = ::fast_io::native_file{u8".", ::fast_io::open_mode::in | ::fast_io::open_mode::directory};
 
         constexpr wasi_void_ptr_wasm64_t iovs_ptr{6144u};
@@ -257,5 +261,4 @@ int main()
 
     return 0;
 }
-
 

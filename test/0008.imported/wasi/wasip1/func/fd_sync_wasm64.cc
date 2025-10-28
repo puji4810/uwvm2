@@ -37,7 +37,12 @@ int main()
     native_memory_t memory{};
     memory.init_by_page_count(1uz);
 
-    wasip1_environment<native_memory_t> env{.wasip1_memory = ::std::addressof(memory), .argv = {}, .envs = {}, .fd_storage = {}, .mount_dir_roots = {}, .trace_wasip1_call = false};
+    wasip1_environment<native_memory_t> env{.wasip1_memory = ::std::addressof(memory),
+                                            .argv = {},
+                                            .envs = {},
+                                            .fd_storage = {},
+                                            .mount_dir_roots = {},
+                                            .trace_wasip1_call = false};
 
     // Prepare fd table: ensure indices [0..4] exist with valid entries
     env.fd_storage.opens.resize(5uz);
@@ -47,7 +52,8 @@ int main()
         auto& fd1 = *env.fd_storage.opens.index_unchecked(4uz).fd_p;
         fd1.rights_base = static_cast<rights_t>(0);
         fd1.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        fd1.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
+        fd1.wasi_fd.ptr->wasi_fd_storage.storage
+            .file_fd
 #if defined(_WIN32) && !defined(__CYGWIN__)
             .file
 #endif
@@ -66,7 +72,8 @@ int main()
         auto& fd3 = *env.fd_storage.opens.index_unchecked(3uz).fd_p;
         fd3.rights_base = static_cast<rights_t>(-1);
         fd3.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        fd3.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
+        fd3.wasi_fd.ptr->wasi_fd_storage.storage
+            .file_fd
 #if defined(_WIN32) && !defined(__CYGWIN__)
             .file
 #endif
@@ -94,7 +101,8 @@ int main()
     {
         auto& fd2 = *env.fd_storage.opens.index_unchecked(2uz).fd_p;
         fd2.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        fd2.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
+        fd2.wasi_fd.ptr->wasi_fd_storage.storage
+            .file_fd
 #if defined(_WIN32) && !defined(__CYGWIN__)
             .file
 #endif
@@ -116,8 +124,4 @@ int main()
         }
     }
 }
-
-
-
-
 

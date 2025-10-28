@@ -44,7 +44,12 @@ int main()
     native_memory_t memory{};
     memory.init_by_page_count(1uz);
 
-    wasip1_environment<native_memory_t> env{.wasip1_memory = ::std::addressof(memory), .argv = {}, .envs = {}, .fd_storage = {}, .mount_dir_roots={}, .trace_wasip1_call = false};
+    wasip1_environment<native_memory_t> env{.wasip1_memory = ::std::addressof(memory),
+                                            .argv = {},
+                                            .envs = {},
+                                            .fd_storage = {},
+                                            .mount_dir_roots = {},
+                                            .trace_wasip1_call = false};
 
     // Prepare fd table
     env.fd_storage.opens.resize(6uz);
@@ -663,8 +668,9 @@ int main()
         auto& fde = *env.fd_storage.opens.index_unchecked(3uz).fd_p;
         fde.rights_base = static_cast<rights_t>(0);
         fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd = ::fast_io::native_file{u8"test_fd_fdstat_set_flags_rights.tmp",
-                                             ::fast_io::open_mode::out | ::fast_io::open_mode::creat | ::fast_io::open_mode::trunc};
+        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd =
+            ::fast_io::native_file{u8"test_fd_fdstat_set_flags_rights.tmp",
+                                   ::fast_io::open_mode::out | ::fast_io::open_mode::creat | ::fast_io::open_mode::trunc};
 
         auto const ret = ::uwvm2::imported::wasi::wasip1::func::fd_fdstat_set_flags(env, static_cast<wasi_posix_fd_t>(3), fdflags_t::fdflag_append);
         if(ret != errno_t::enotcapable)
@@ -679,8 +685,9 @@ int main()
         auto& fde = *env.fd_storage.opens.index_unchecked(2uz).fd_p;
         fde.rights_base = static_cast<rights_t>(-1);
         fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd = ::fast_io::native_file{u8"test_fd_fdstat_set_flags_close.tmp",
-                                             ::fast_io::open_mode::out | ::fast_io::open_mode::creat | ::fast_io::open_mode::trunc};
+        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd =
+            ::fast_io::native_file{u8"test_fd_fdstat_set_flags_close.tmp",
+                                   ::fast_io::open_mode::out | ::fast_io::open_mode::creat | ::fast_io::open_mode::trunc};
 
         auto const closed = ::uwvm2::imported::wasi::wasip1::func::fd_close(env, static_cast<wasi_posix_fd_t>(2));
         if(closed != errno_t::esuccess)
@@ -697,7 +704,7 @@ int main()
         }
     }
 
-#if defined(_WIN32) && !defined(__CYGWIN__)
+# if defined(_WIN32) && !defined(__CYGWIN__)
     {
         using ::uwvm2::imported::wasi::wasip1::abi::errno_t;
         using ::uwvm2::imported::wasi::wasip1::abi::fdflags_t;
@@ -705,23 +712,29 @@ int main()
         using ::uwvm2::imported::wasi::wasip1::abi::wasi_posix_fd_t;
         using ::uwvm2::imported::wasi::wasip1::environment::wasip1_environment;
         using ::uwvm2::object::memory::linear::native_memory_t;
-    
+
         native_memory_t memory{};
         memory.init_by_page_count(1uz);
-    
-        wasip1_environment<native_memory_t> env{.wasip1_memory = ::std::addressof(memory), .argv = {}, .envs = {}, .fd_storage = {}, .mount_dir_roots={}, .trace_wasip1_call = false};
-    
+
+        wasip1_environment<native_memory_t> env{.wasip1_memory = ::std::addressof(memory),
+                                                .argv = {},
+                                                .envs = {},
+                                                .fd_storage = {},
+                                                .mount_dir_roots = {},
+                                                .trace_wasip1_call = false};
+
         // Prepare fd table
         env.fd_storage.opens.resize(6uz);
-    
+
         // Setup fd=4 as a Win32 socket with all rights
         {
             auto& fd4 = *env.fd_storage.opens.index_unchecked(4uz).fd_p;
             fd4.rights_base = static_cast<rights_t>(-1);
             fd4.rights_inherit = static_cast<rights_t>(-1);
             fd4.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::socket);
-            fd4.wasi_fd.ptr->wasi_fd_storage.storage.socket_fd = ::fast_io::win32_socket_file{::fast_io::socket_family::ipv4, ::fast_io::socket_type::stream, ::fast_io::socket_protocol::tcp};
-    
+            fd4.wasi_fd.ptr->wasi_fd_storage.storage.socket_fd =
+                ::fast_io::win32_socket_file{::fast_io::socket_family::ipv4, ::fast_io::socket_type::stream, ::fast_io::socket_protocol::tcp};
+
             // nonblock should be supported on sockets
             {
                 auto const ret = ::uwvm2::imported::wasi::wasip1::func::fd_fdstat_set_flags(env, static_cast<wasi_posix_fd_t>(4), fdflags_t::fdflag_nonblock);
@@ -730,7 +743,7 @@ int main()
                     ::fast_io::io::perrln(::fast_io::u8err(), u8"fd_fdstat_set_flags(win32-socket): set nonblock expected esuccess");
                     ::fast_io::fast_terminate();
                 }
-    
+
                 auto const clr = ::uwvm2::imported::wasi::wasip1::func::fd_fdstat_set_flags(env, static_cast<wasi_posix_fd_t>(4), static_cast<fdflags_t>(0));
                 if(clr != errno_t::esuccess)
                 {
@@ -738,7 +751,7 @@ int main()
                     ::fast_io::fast_terminate();
                 }
             }
-    
+
             // Other flags should be ENOTSUP for sockets on Win32
             {
                 auto const r1 = ::uwvm2::imported::wasi::wasip1::func::fd_fdstat_set_flags(env, static_cast<wasi_posix_fd_t>(4), fdflags_t::fdflag_append);
@@ -752,14 +765,15 @@ int main()
                 }
             }
         }
-    
+
         // Rights missing => enotcapable
         {
             auto& fde = *env.fd_storage.opens.index_unchecked(3uz).fd_p;
             fde.rights_base = static_cast<rights_t>(0);
             fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::socket);
-            fde.wasi_fd.ptr->wasi_fd_storage.storage.socket_fd = ::fast_io::win32_socket_file{::fast_io::socket_family::ipv4, ::fast_io::socket_type::stream, ::fast_io::socket_protocol::tcp};
-    
+            fde.wasi_fd.ptr->wasi_fd_storage.storage.socket_fd =
+                ::fast_io::win32_socket_file{::fast_io::socket_family::ipv4, ::fast_io::socket_type::stream, ::fast_io::socket_protocol::tcp};
+
             auto const ret = ::uwvm2::imported::wasi::wasip1::func::fd_fdstat_set_flags(env, static_cast<wasi_posix_fd_t>(3), fdflags_t::fdflag_nonblock);
             if(ret != errno_t::enotcapable)
             {
@@ -767,21 +781,22 @@ int main()
                 ::fast_io::fast_terminate();
             }
         }
-    
+
         // After close => ebadf
         {
             auto& fde = *env.fd_storage.opens.index_unchecked(2uz).fd_p;
             fde.rights_base = static_cast<rights_t>(-1);
             fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::socket);
-            fde.wasi_fd.ptr->wasi_fd_storage.storage.socket_fd = ::fast_io::win32_socket_file{::fast_io::socket_family::ipv4, ::fast_io::socket_type::stream, ::fast_io::socket_protocol::tcp};
-    
+            fde.wasi_fd.ptr->wasi_fd_storage.storage.socket_fd =
+                ::fast_io::win32_socket_file{::fast_io::socket_family::ipv4, ::fast_io::socket_type::stream, ::fast_io::socket_protocol::tcp};
+
             auto const closed = ::uwvm2::imported::wasi::wasip1::func::fd_close(env, static_cast<wasi_posix_fd_t>(2));
             if(closed != errno_t::esuccess)
             {
                 ::fast_io::io::perrln(::fast_io::u8err(), u8"fd_fdstat_set_flags(win32-socket): close expected esuccess");
                 ::fast_io::fast_terminate();
             }
-    
+
             auto const ret = ::uwvm2::imported::wasi::wasip1::func::fd_fdstat_set_flags(env, static_cast<wasi_posix_fd_t>(2), fdflags_t::fdflag_nonblock);
             if(ret != errno_t::ebadf)
             {
@@ -790,7 +805,7 @@ int main()
             }
         }
     }
-#endif
+# endif
 }
 
 #else

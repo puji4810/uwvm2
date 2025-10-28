@@ -726,14 +726,15 @@ int main()
 
         constexpr wasi_void_ptr_wasm64_t p{45056u};
         constexpr auto s = u8"pcd64_abs/hack";
-        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(
-            memory,
-            p,
-            reinterpret_cast<::std::byte const*>(s),
-            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd64_abs/hack") - 1u);
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(memory,
+                                                                            p,
+                                                                            reinterpret_cast<::std::byte const*>(s),
+                                                                            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd64_abs/hack") - 1u);
 
-        auto const ret = ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(
-            env, static_cast<wasi_posix_fd_wasm64_t>(3), p, static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_abs/hack") - 1u));
+        auto const ret = ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(env,
+                                                                                             static_cast<wasi_posix_fd_wasm64_t>(3),
+                                                                                             p,
+                                                                                             static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_abs/hack") - 1u));
         if(ret != errno_wasm64_t::eperm) { ::fast_io::fast_terminate(); }
 
         try
@@ -758,14 +759,15 @@ int main()
 
         constexpr wasi_void_ptr_wasm64_t p{47104u};
         constexpr auto s = u8"pcd64_loop2_a/x";
-        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(
-            memory,
-            p,
-            reinterpret_cast<::std::byte const*>(s),
-            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd64_loop2_a/x") - 1u);
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(memory,
+                                                                            p,
+                                                                            reinterpret_cast<::std::byte const*>(s),
+                                                                            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd64_loop2_a/x") - 1u);
 
-        auto const ret = ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(
-            env, static_cast<wasi_posix_fd_wasm64_t>(3), p, static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_loop2_a/x") - 1u));
+        auto const ret = ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(env,
+                                                                                             static_cast<wasi_posix_fd_wasm64_t>(3),
+                                                                                             p,
+                                                                                             static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_loop2_a/x") - 1u));
         if(ret != errno_wasm64_t::eloop) { ::fast_io::fast_terminate(); }
 
         try
@@ -810,14 +812,16 @@ int main()
 
         constexpr wasi_void_ptr_wasm64_t p{49152u};
         constexpr auto s = u8"pcd64_escape_a/up/x";
-        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(
-            memory,
-            p,
-            reinterpret_cast<::std::byte const*>(s),
-            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd64_escape_a/up/x") - 1u);
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(memory,
+                                                                            p,
+                                                                            reinterpret_cast<::std::byte const*>(s),
+                                                                            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd64_escape_a/up/x") - 1u);
 
-        auto const ret = ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(
-            env, static_cast<wasi_posix_fd_wasm64_t>(3), p, static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_escape_a/up/x") - 1u));
+        auto const ret =
+            ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(env,
+                                                                                static_cast<wasi_posix_fd_wasm64_t>(3),
+                                                                                p,
+                                                                                static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_escape_a/up/x") - 1u));
         if(ret != errno_wasm64_t::esuccess) { ::fast_io::fast_terminate(); }
 
         // verify created at CWD: "x"
@@ -873,14 +877,15 @@ int main()
 
         constexpr wasi_void_ptr_wasm64_t p{51200u};
         constexpr auto s = u8"pcd64_ro_a/no";
-        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(
-            memory,
-            p,
-            reinterpret_cast<::std::byte const*>(s),
-            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd64_ro_a/no") - 1u);
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(memory,
+                                                                            p,
+                                                                            reinterpret_cast<::std::byte const*>(s),
+                                                                            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd64_ro_a/no") - 1u);
 
-        auto const ret = ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(
-            env, static_cast<wasi_posix_fd_wasm64_t>(3), p, static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_ro_a/no") - 1u));
+        auto const ret = ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(env,
+                                                                                             static_cast<wasi_posix_fd_wasm64_t>(3),
+                                                                                             p,
+                                                                                             static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_ro_a/no") - 1u));
         if(!(ret == errno_wasm64_t::eacces || ret == errno_wasm64_t::eperm)) { ::fast_io::fast_terminate(); }
 
         // restore and cleanup
@@ -919,14 +924,16 @@ int main()
 
         constexpr wasi_void_ptr_wasm64_t p{53248u};
         constexpr auto s = u8"pcd64_link_to_file/x";
-        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(
-            memory,
-            p,
-            reinterpret_cast<::std::byte const*>(s),
-            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd64_link_to_file/x") - 1u);
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(memory,
+                                                                            p,
+                                                                            reinterpret_cast<::std::byte const*>(s),
+                                                                            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd64_link_to_file/x") - 1u);
 
-        auto const ret = ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(
-            env, static_cast<wasi_posix_fd_wasm64_t>(3), p, static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_link_to_file/x") - 1u));
+        auto const ret =
+            ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(env,
+                                                                                static_cast<wasi_posix_fd_wasm64_t>(3),
+                                                                                p,
+                                                                                static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_link_to_file/x") - 1u));
         if(ret != errno_wasm64_t::enotdir) { ::fast_io::fast_terminate(); }
 
         // cleanup

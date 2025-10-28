@@ -42,16 +42,20 @@ int main()
     native_memory_t memory{};
     memory.init_by_page_count(1uz);
 
-    wasip1_environment<native_memory_t> env{.wasip1_memory = ::std::addressof(memory), .argv = {}, .envs = {}, .fd_storage = {}, .mount_dir_roots={}, .trace_wasip1_call = false};
+    wasip1_environment<native_memory_t> env{.wasip1_memory = ::std::addressof(memory),
+                                            .argv = {},
+                                            .envs = {},
+                                            .fd_storage = {},
+                                            .mount_dir_roots = {},
+                                            .trace_wasip1_call = false};
 
     env.fd_storage.opens.resize(6uz);
 
     // Case 0: negative fd → ebadf
     {
-        auto const ret = ::uwvm2::imported::wasi::wasip1::func::fd_filestat_get_wasm64(
-            env,
-            static_cast<wasi_posix_fd_wasm64_t>(-1),
-            static_cast<wasi_void_ptr_wasm64_t>(1024u));
+        auto const ret = ::uwvm2::imported::wasi::wasip1::func::fd_filestat_get_wasm64(env,
+                                                                                       static_cast<wasi_posix_fd_wasm64_t>(-1),
+                                                                                       static_cast<wasi_void_ptr_wasm64_t>(1024u));
         if(ret != errno_wasm64_t::ebadf)
         {
             ::fast_io::io::perrln(::fast_io::u8err(), u8"fd_filestat_get_wasm64_win32: expected ebadf for negative fd");
@@ -65,10 +69,11 @@ int main()
         fd4.rights_base = static_cast<rights_wasm64_t>(-1);
         fd4.rights_inherit = static_cast<rights_wasm64_t>(-1);
         fd4.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        fd4.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
-#if defined(_WIN32) && !defined(__CYGWIN__)
+        fd4.wasi_fd.ptr->wasi_fd_storage.storage
+            .file_fd
+# if defined(_WIN32) && !defined(__CYGWIN__)
             .file
-#endif
+# endif
             = ::fast_io::native_file{u8"test_fd_filestat_get_wasm64_win32_regular.tmp",
                                      ::fast_io::open_mode::out | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat};
     }
@@ -81,7 +86,8 @@ int main()
             ::fast_io::fast_terminate();
         }
 
-        auto const ft = ::uwvm2::imported::wasi::wasip1::memory::get_basic_wasm_type_from_memory_wasm64<std::underlying_type_t<filetype_wasm64_t>>(memory, stat_ptr + 16u);
+        auto const ft =
+            ::uwvm2::imported::wasi::wasip1::memory::get_basic_wasm_type_from_memory_wasm64<std::underlying_type_t<filetype_wasm64_t>>(memory, stat_ptr + 16u);
         if(ft != static_cast<std::underlying_type_t<filetype_wasm64_t>>(filetype_wasm64_t::filetype_regular_file))
         {
             ::fast_io::io::perrln(::fast_io::u8err(), u8"fd_filestat_get_wasm64_win32: filetype should be regular");
@@ -95,10 +101,11 @@ int main()
         fde.rights_base = static_cast<rights_wasm64_t>(-1);
         fde.rights_inherit = static_cast<rights_wasm64_t>(-1);
         fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
-#if defined(_WIN32) && !defined(__CYGWIN__)
+        fde.wasi_fd.ptr->wasi_fd_storage.storage
+            .file_fd
+# if defined(_WIN32) && !defined(__CYGWIN__)
             .file
-#endif
+# endif
             = ::fast_io::native_file{u8"test_fd_filestat_get_wasm64_win32_close.tmp",
                                      ::fast_io::open_mode::out | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat};
 
@@ -134,16 +141,20 @@ int main()
     native_memory_t memory{};
     memory.init_by_page_count(1uz);
 
-    wasip1_environment<native_memory_t> env{.wasip1_memory = ::std::addressof(memory), .argv = {}, .envs = {}, .fd_storage = {}, .mount_dir_roots={}, .trace_wasip1_call = false};
+    wasip1_environment<native_memory_t> env{.wasip1_memory = ::std::addressof(memory),
+                                            .argv = {},
+                                            .envs = {},
+                                            .fd_storage = {},
+                                            .mount_dir_roots = {},
+                                            .trace_wasip1_call = false};
 
     env.fd_storage.opens.resize(6uz);
 
     // Case 0: negative fd → ebadf
     {
-        auto const ret = ::uwvm2::imported::wasi::wasip1::func::fd_filestat_get_wasm64(
-            env,
-            static_cast<wasi_posix_fd_wasm64_t>(-1),
-            static_cast<wasi_void_ptr_wasm64_t>(1024u));
+        auto const ret = ::uwvm2::imported::wasi::wasip1::func::fd_filestat_get_wasm64(env,
+                                                                                       static_cast<wasi_posix_fd_wasm64_t>(-1),
+                                                                                       static_cast<wasi_void_ptr_wasm64_t>(1024u));
         if(ret != errno_wasm64_t::ebadf)
         {
             ::fast_io::io::perrln(::fast_io::u8err(), u8"fd_filestat_get_wasm64: expected ebadf for negative fd");
@@ -157,10 +168,11 @@ int main()
         fd4.rights_base = static_cast<rights_wasm64_t>(-1);
         fd4.rights_inherit = static_cast<rights_wasm64_t>(-1);
         fd4.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        fd4.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
-#if defined(_WIN32) && !defined(__CYGWIN__)
+        fd4.wasi_fd.ptr->wasi_fd_storage.storage
+            .file_fd
+# if defined(_WIN32) && !defined(__CYGWIN__)
             .file
-#endif
+# endif
             = ::fast_io::native_file{u8"test_fd_filestat_get_wasm64_regular.tmp",
                                      ::fast_io::open_mode::out | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat};
     }
@@ -175,14 +187,16 @@ int main()
             ::fast_io::fast_terminate();
         }
 
-        auto const ft = ::uwvm2::imported::wasi::wasip1::memory::get_basic_wasm_type_from_memory_wasm64<std::underlying_type_t<filetype_wasm64_t>>(memory, stat_ptr + 16u);
+        auto const ft =
+            ::uwvm2::imported::wasi::wasip1::memory::get_basic_wasm_type_from_memory_wasm64<std::underlying_type_t<filetype_wasm64_t>>(memory, stat_ptr + 16u);
         if(ft != static_cast<std::underlying_type_t<filetype_wasm64_t>>(filetype_wasm64_t::filetype_regular_file))
         {
             ::fast_io::io::perrln(::fast_io::u8err(), u8"fd_filestat_get_wasm64: filetype should be regular");
             ::fast_io::fast_terminate();
         }
 
-        auto const sz = ::uwvm2::imported::wasi::wasip1::memory::get_basic_wasm_type_from_memory_wasm64<std::underlying_type_t<decltype(::uwvm2::imported::wasi::wasip1::abi::filesize_wasm64_t{})>>(memory, stat_ptr + 32u);
+        auto const sz = ::uwvm2::imported::wasi::wasip1::memory::get_basic_wasm_type_from_memory_wasm64<
+            std::underlying_type_t<decltype(::uwvm2::imported::wasi::wasip1::abi::filesize_wasm64_t{})>>(memory, stat_ptr + 32u);
         (void)sz;
     }
 
@@ -192,10 +206,11 @@ int main()
         fde.rights_base = static_cast<rights_wasm64_t>(-1);
         fde.rights_inherit = static_cast<rights_wasm64_t>(-1);
         fde.wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd
-#if defined(_WIN32) && !defined(__CYGWIN__)
+        fde.wasi_fd.ptr->wasi_fd_storage.storage
+            .file_fd
+# if defined(_WIN32) && !defined(__CYGWIN__)
             .file
-#endif
+# endif
             = ::fast_io::native_file{u8"test_fd_filestat_get_wasm64_close.tmp",
                                      ::fast_io::open_mode::out | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat};
 
@@ -217,5 +232,4 @@ int main()
 }
 
 #endif
-
 

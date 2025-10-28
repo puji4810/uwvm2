@@ -54,7 +54,8 @@ int main()
     // Case 1: success with valid rights (default constructed rights_base == all)
     {
         // ensure target fd has a valid native handle
-        env.fd_storage.opens.index_unchecked(3uz).fd_p->wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
+        env.fd_storage.opens.index_unchecked(3uz).fd_p->wasi_fd.ptr->wasi_fd_storage.reset_type(
+            ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
         env.fd_storage.opens.index_unchecked(3uz)
             .fd_p->wasi_fd.ptr->wasi_fd_storage.storage
             .file_fd
@@ -79,7 +80,8 @@ int main()
     {
         env.fd_storage.opens.index_unchecked(4uz).fd_p->rights_base = static_cast<rights_t>(0);
         // ensure the target fd has a valid native handle to avoid platform traps on fadvise
-        env.fd_storage.opens.index_unchecked(4uz).fd_p->wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
+        env.fd_storage.opens.index_unchecked(4uz).fd_p->wasi_fd.ptr->wasi_fd_storage.reset_type(
+            ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
         env.fd_storage.opens.index_unchecked(4uz)
             .fd_p->wasi_fd.ptr->wasi_fd_storage.storage
             .file_fd

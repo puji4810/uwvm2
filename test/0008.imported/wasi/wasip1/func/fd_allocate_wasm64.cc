@@ -38,15 +38,23 @@ int main()
     native_memory_t memory{};
     memory.init_by_page_count(1uz);
 
-    wasip1_environment<native_memory_t> env{.wasip1_memory = ::std::addressof(memory), .argv = {}, .envs = {}, .fd_storage = {}, .mount_dir_roots={}, .trace_wasip1_call = false};
+    wasip1_environment<native_memory_t> env{.wasip1_memory = ::std::addressof(memory),
+                                            .argv = {},
+                                            .envs = {},
+                                            .fd_storage = {},
+                                            .mount_dir_roots = {},
+                                            .trace_wasip1_call = false};
 
     // Prepare fd table: ensure indices [0..4] exist with valid entries
     env.fd_storage.opens.resize(5uz);
 
     // Case 1: esuccess when len == 0 and rights ok
     {
-        env.fd_storage.opens.index_unchecked(3uz).fd_p->wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        env.fd_storage.opens.index_unchecked(3uz).fd_p->wasi_fd.ptr->wasi_fd_storage.storage.file_fd
+        env.fd_storage.opens.index_unchecked(3uz).fd_p->wasi_fd.ptr->wasi_fd_storage.reset_type(
+            ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
+        env.fd_storage.opens.index_unchecked(3uz)
+            .fd_p->wasi_fd.ptr->wasi_fd_storage.storage
+            .file_fd
 #if defined(_WIN32) && !defined(__CYGWIN__)
             .file
 #endif
@@ -66,8 +74,11 @@ int main()
     // Case 2: enotcapable when rights do not include right_fd_allocate
     {
         env.fd_storage.opens.index_unchecked(4uz).fd_p->rights_base = static_cast<rights_t>(0);
-        env.fd_storage.opens.index_unchecked(4uz).fd_p->wasi_fd.ptr->wasi_fd_storage.reset_type(::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
-        env.fd_storage.opens.index_unchecked(4uz).fd_p->wasi_fd.ptr->wasi_fd_storage.storage.file_fd
+        env.fd_storage.opens.index_unchecked(4uz).fd_p->wasi_fd.ptr->wasi_fd_storage.reset_type(
+            ::uwvm2::imported::wasi::wasip1::fd_manager::wasi_fd_type_e::file);
+        env.fd_storage.opens.index_unchecked(4uz)
+            .fd_p->wasi_fd.ptr->wasi_fd_storage.storage
+            .file_fd
 #if defined(_WIN32) && !defined(__CYGWIN__)
             .file
 #endif
@@ -97,5 +108,4 @@ int main()
         }
     }
 }
-
 

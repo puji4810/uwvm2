@@ -50,7 +50,12 @@ int main()
     envs.push_back(u8string_view{e1.data(), e1.size()});
     envs.push_back(u8string_view{e2.data(), e2.size()});
 
-    wasip1_environment<native_memory_t> env{.wasip1_memory = ::std::addressof(memory), .argv = args, .envs = envs, .fd_storage = {}, .mount_dir_roots={}, .trace_wasip1_call = false};
+    wasip1_environment<native_memory_t> env{.wasip1_memory = ::std::addressof(memory),
+                                            .argv = args,
+                                            .envs = envs,
+                                            .fd_storage = {},
+                                            .mount_dir_roots = {},
+                                            .trace_wasip1_call = false};
 
     constexpr wasi_void_ptr_t envc_ptr{1024u};
     constexpr wasi_void_ptr_t envbuf_size_ptr{2048u};

@@ -167,7 +167,7 @@ int main()
         {
             return 0;
         }
-        
+
         {
             ::uwvm2::imported::wasi::wasip1::fd_manager::dir_stack_entry_ref_t entry{};
             entry.ptr->dir_stack.file = ::fast_io::dir_file{u8"a"};
