@@ -197,7 +197,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::uwvm::wasm::loader
 #  ifdef UWVM_TIMER
                 ::uwvm2::utils::debug::timer parsing_timer{u8"dl loader"};
 #  endif
-
+                // dl always follow symlink
                 wd.import_dll_file = ::fast_io::native_dll_file{load_file_name, ::fast_io::dll_mode::posix_rtld_lazy};
             }
 #  ifdef UWVM_CPP_EXCEPTIONS
@@ -234,6 +234,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::uwvm::wasm::loader
             ::uwvm2::utils::debug::timer parsing_timer{u8"dl loader"};
 #  endif
 
+            // dl always follow symlink
             wd.import_dll_file = ::fast_io::native_dll_file{load_file_name, ::fast_io::dll_mode::posix_rtld_lazy};
         }
 #  ifdef UWVM_CPP_EXCEPTIONS

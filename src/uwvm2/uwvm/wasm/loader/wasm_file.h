@@ -144,7 +144,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::uwvm::wasm::loader
 # endif
 
                 // On platforms where CHAR_BIT is greater than 8, there is no need to clear the utf-8 non-low 8 bits here
-                wf.wasm_file = ::fast_io::native_file_loader{::fast_io::io_kernel, load_file_name_nt_subview};
+                // allow symlink
+                wf.wasm_file = ::fast_io::native_file_loader{::fast_io::io_kernel, load_file_name_nt_subview, ::fast_io::open_mode::in | ::fast_io::open_mode::follow};
             }
 # ifdef UWVM_CPP_EXCEPTIONS
             catch(::fast_io::error e)
@@ -181,7 +182,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::uwvm::wasm::loader
 # endif
 
                 // On platforms where CHAR_BIT is greater than 8, there is no need to clear the utf-8 non-low 8 bits here
-                wf.wasm_file = ::fast_io::native_file_loader{load_file_name};
+                // allow symlink
+                wf.wasm_file = ::fast_io::native_file_loader{load_file_name, ::fast_io::open_mode::in | ::fast_io::open_mode::follow};
             }
 # ifdef UWVM_CPP_EXCEPTIONS
             catch(::fast_io::error e)
@@ -217,7 +219,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::uwvm::wasm::loader
 # endif
 
             // On platforms where CHAR_BIT is greater than 8, there is no need to clear the utf-8 non-low 8 bits here
-            wf.wasm_file = ::fast_io::native_file_loader{load_file_name};
+            // allow symlink
+            wf.wasm_file = ::fast_io::native_file_loader{load_file_name, ::fast_io::open_mode::in | ::fast_io::open_mode::follow};
         }
 # ifdef UWVM_CPP_EXCEPTIONS
         catch(::fast_io::error e)

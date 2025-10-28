@@ -168,7 +168,8 @@ namespace uwvm2::uwvm::cmdline::params::details
             try
 # endif
             {
-                ::fast_io::native_file tmp{::fast_io::io_kernel, systemdir_nt_subview, ::fast_io::open_mode::directory};
+                // allow symlink
+                ::fast_io::native_file tmp{::fast_io::io_kernel, systemdir_nt_subview, ::fast_io::open_mode::directory | ::fast_io::open_mode::follow};
                 entry = ::fast_io::dir_file{tmp.release()};
             }
 # ifdef UWVM_CPP_EXCEPTIONS
@@ -200,7 +201,8 @@ namespace uwvm2::uwvm::cmdline::params::details
             try
 # endif
             {
-                entry = ::fast_io::dir_file{system_dir};
+                // allow symlink
+                entry = ::fast_io::dir_file{system_dir, ::fast_io::open_mode::follow};
             }
 # ifdef UWVM_CPP_EXCEPTIONS
             catch(::fast_io::error e)
@@ -232,7 +234,8 @@ namespace uwvm2::uwvm::cmdline::params::details
         try
 # endif
         {
-            entry = ::fast_io::dir_file{system_dir};
+            // allow symlink
+            entry = ::fast_io::dir_file{system_dir, ::fast_io::open_mode::follow};
         }
 # ifdef UWVM_CPP_EXCEPTIONS
         catch(::fast_io::error e)
@@ -610,7 +613,7 @@ namespace uwvm2::uwvm::cmdline::params::details
         // windows nt: safe (native handle)
         // windows 9x: unsafe (VxD does not provide directory handles, and multitasking exacerbates the TOCTOU problem.)
         // djgpp: safe (Due to single-task mode + full DJGPP control)
-        
+
 #if defined(_WIN32) && defined(_WIN32_WINDOWS)
         if(::uwvm2::uwvm::io::show_toctou_warning)
         {

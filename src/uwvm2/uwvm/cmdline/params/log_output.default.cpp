@@ -192,7 +192,10 @@ namespace uwvm2::uwvm::cmdline::params::details
                 try
 #  endif
                 {
-                    ::uwvm2::uwvm::io::u8log_output.reopen(::fast_io::io_kernel, currp2_str_nt_subview, ::fast_io::open_mode::out);
+                    // allow symlink
+                    ::uwvm2::uwvm::io::u8log_output.reopen(::fast_io::io_kernel,
+                                                           currp2_str_nt_subview,
+                                                           ::fast_io::open_mode::out | ::fast_io::open_mode::follow);
                 }
 #  if defined(UWVM_CPP_EXCEPTIONS) && !defined(UWVM_TERMINATE_IMME_WHEN_PARSE)
                 catch(::fast_io::error e)
@@ -223,7 +226,8 @@ namespace uwvm2::uwvm::cmdline::params::details
                 try
 #  endif
                 {
-                    ::uwvm2::uwvm::io::u8log_output.reopen(currp2_str, ::fast_io::open_mode::out);
+                    // allow symlink
+                    ::uwvm2::uwvm::io::u8log_output.reopen(currp2_str, ::fast_io::open_mode::out | ::fast_io::open_mode::follow);
                 }
 #  if defined(UWVM_CPP_EXCEPTIONS) && !defined(UWVM_TERMINATE_IMME_WHEN_PARSE)
                 catch(::fast_io::error e)
@@ -253,7 +257,8 @@ namespace uwvm2::uwvm::cmdline::params::details
             try
 #  endif
             {
-                ::uwvm2::uwvm::io::u8log_output.reopen(currp2_str, ::fast_io::open_mode::out);
+                // allow symlink
+                ::uwvm2::uwvm::io::u8log_output.reopen(currp2_str, ::fast_io::open_mode::out | ::fast_io::open_mode::follow);
             }
 #  if defined(UWVM_CPP_EXCEPTIONS) && !defined(UWVM_TERMINATE_IMME_WHEN_PARSE)
             catch(::fast_io::error e)
