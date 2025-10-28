@@ -54,7 +54,11 @@ int main()
                                                                                              static_cast<wasi_posix_fd_wasm64_t>(-1),
                                                                                              static_cast<wasi_void_ptr_wasm64_t>(0u),
                                                                                              static_cast<wasi_size_wasm64_t>(0u));
-        if(ret != errno_wasm64_t::ebadf) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::ebadf)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 0 expected ebadf");
+            ::fast_io::fast_terminate();
+        }
     }
 
     // Common: set up a directory fd at index 3 with '.'
@@ -93,7 +97,11 @@ int main()
                                                                                 static_cast<wasi_posix_fd_wasm64_t>(4),
                                                                                 p,
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"uwvm_ut_pcd64_no_rights") - 1u));
-        if(ret != errno_wasm64_t::enotcapable) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::enotcapable)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 1 expected enotcapable");
+            ::fast_io::fast_terminate();
+        }
     }
 
     // Case 2: fd is file -> enotdir
@@ -114,7 +122,11 @@ int main()
                                                                                 static_cast<wasi_posix_fd_wasm64_t>(5),
                                                                                 p,
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"uwvm_ut_pcd64_notdir") - 1u));
-        if(ret != errno_wasm64_t::enotdir) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::enotdir)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 2 expected enotdir");
+            ::fast_io::fast_terminate();
+        }
     }
 
     // Case 3: absolute path -> eperm
@@ -140,7 +152,11 @@ int main()
                                                                                              static_cast<wasi_posix_fd_wasm64_t>(6),
                                                                                              p,
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"/abs64_dir") - 1u));
-        if(ret != errno_wasm64_t::eperm) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::eperm)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 3 expected eperm");
+            ::fast_io::fast_terminate();
+        }
     }
 
     // Case 4: '.' last component -> eexist
@@ -166,7 +182,11 @@ int main()
                                                                                              static_cast<wasi_posix_fd_wasm64_t>(7),
                                                                                              p,
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8".") - 1u));
-        if(ret != errno_wasm64_t::eexist) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::eexist)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 4 expected eexist");
+            ::fast_io::fast_terminate();
+        }
     }
 
     // Case 5: empty -> einval
@@ -186,7 +206,11 @@ int main()
                                                                                              static_cast<wasi_posix_fd_wasm64_t>(8),
                                                                                              p,
                                                                                              static_cast<wasi_size_wasm64_t>(0u));
-        if(ret != errno_wasm64_t::einval) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::einval)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 5 expected einval");
+            ::fast_io::fast_terminate();
+        }
     }
 
     // Case 6: success create and cleanup
@@ -203,7 +227,11 @@ int main()
                                                                                 static_cast<wasi_posix_fd_wasm64_t>(3),
                                                                                 p,
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"uwvm_ut_pcd64_ok") - 1u));
-        if(ret != errno_wasm64_t::esuccess) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::esuccess)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 6 expected esuccess");
+            ::fast_io::fast_terminate();
+        }
 
         // cleanup (ignore failures)
         try
@@ -243,7 +271,11 @@ int main()
                                                                                              static_cast<wasi_posix_fd_wasm64_t>(3),
                                                                                              p,
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_dot_a/b/.") - 1u));
-        if(ret != errno_wasm64_t::eexist) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::eexist)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 7 expected eexist");
+            ::fast_io::fast_terminate();
+        }
 
         try
         {
@@ -283,7 +315,11 @@ int main()
                                                                                 static_cast<wasi_posix_fd_wasm64_t>(3),
                                                                                 p,
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_dot2_a/x/.") - 1u));
-        if(ret != errno_wasm64_t::enoent) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::enoent)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 8 expected enoent");
+            ::fast_io::fast_terminate();
+        }
 
         try
         {
@@ -319,7 +355,11 @@ int main()
                                                                                 static_cast<wasi_posix_fd_wasm64_t>(3),
                                                                                 p,
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_dot3_a/f/.") - 1u));
-        if(ret != errno_wasm64_t::enotdir) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::enotdir)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 9 expected enotdir");
+            ::fast_io::fast_terminate();
+        }
 
         try
         {
@@ -366,7 +406,11 @@ int main()
                                                                                 static_cast<wasi_posix_fd_wasm64_t>(3),
                                                                                 p,
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_pp_a/b/../c") - 1u));
-        if(ret != errno_wasm64_t::esuccess) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::esuccess)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 10 expected esuccess");
+            ::fast_io::fast_terminate();
+        }
 
         // verify created
         try
@@ -375,6 +419,7 @@ int main()
         }
         catch(::fast_io::error)
         {
+            ::fast_io::io::perrln("error: pcd64 Case 10 verify created failed");
             ::fast_io::fast_terminate();
         }
 
@@ -424,7 +469,11 @@ int main()
                                                                                 static_cast<wasi_posix_fd_wasm64_t>(3),
                                                                                 p,
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_pp2_a/b/../c") - 1u));
-        if(ret != errno_wasm64_t::enoent) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::enoent)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 11 expected enoent");
+            ::fast_io::fast_terminate();
+        }
 
         try
         {
@@ -460,7 +509,11 @@ int main()
                                                                                 static_cast<wasi_posix_fd_wasm64_t>(3),
                                                                                 p,
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_pp3_a/b/../c") - 1u));
-        if(ret != errno_wasm64_t::enotdir) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::enotdir)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 12 expected enotdir");
+            ::fast_io::fast_terminate();
+        }
 
         try
         {
@@ -514,7 +567,11 @@ int main()
                                                                                 static_cast<wasi_posix_fd_wasm64_t>(3),
                                                                                 p,
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_pp4_a/b/../c") - 1u));
-        if(ret != errno_wasm64_t::eexist) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::eexist)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 13 expected eexist");
+            ::fast_io::fast_terminate();
+        }
 
         // cleanup
         try
@@ -569,7 +626,11 @@ int main()
                                                                                 static_cast<wasi_posix_fd_wasm64_t>(3),
                                                                                 p,
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_link_to_a/c") - 1u));
-        if(ret != errno_wasm64_t::esuccess) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::esuccess)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 14 expected esuccess");
+            ::fast_io::fast_terminate();
+        }
 
         try
         {
@@ -577,6 +638,7 @@ int main()
         }
         catch(::fast_io::error)
         {
+            ::fast_io::io::perrln("error: pcd64 Case 14 verify created failed");
             ::fast_io::fast_terminate();
         }
 
@@ -625,7 +687,11 @@ int main()
                                                                                              static_cast<wasi_posix_fd_wasm64_t>(3),
                                                                                              p,
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_loop/x") - 1u));
-        if(ret != errno_wasm64_t::eloop) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::eloop)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 15 expected eloop");
+            ::fast_io::fast_terminate();
+        }
 
         try
         {
@@ -657,7 +723,11 @@ int main()
                                                                                              static_cast<wasi_posix_fd_wasm64_t>(3),
                                                                                              p,
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_up/x") - 1u));
-        if(ret != errno_wasm64_t::eperm) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::eperm)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 16 expected eperm");
+            ::fast_io::fast_terminate();
+        }
 
         try
         {
@@ -696,7 +766,11 @@ int main()
                                                                                              static_cast<wasi_posix_fd_wasm64_t>(3),
                                                                                              p,
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_ex_a/b") - 1u));
-        if(ret != errno_wasm64_t::eexist) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::eexist)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 17 expected eexist");
+            ::fast_io::fast_terminate();
+        }
 
         try
         {
@@ -735,7 +809,11 @@ int main()
                                                                                              static_cast<wasi_posix_fd_wasm64_t>(3),
                                                                                              p,
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_abs/hack") - 1u));
-        if(ret != errno_wasm64_t::eperm) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::eperm)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 18 expected eperm");
+            ::fast_io::fast_terminate();
+        }
 
         try
         {
@@ -768,7 +846,11 @@ int main()
                                                                                              static_cast<wasi_posix_fd_wasm64_t>(3),
                                                                                              p,
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_loop2_a/x") - 1u));
-        if(ret != errno_wasm64_t::eloop) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::eloop)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 19 expected eloop");
+            ::fast_io::fast_terminate();
+        }
 
         try
         {
@@ -822,7 +904,11 @@ int main()
                                                                                 static_cast<wasi_posix_fd_wasm64_t>(3),
                                                                                 p,
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_escape_a/up/x") - 1u));
-        if(ret != errno_wasm64_t::esuccess) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::esuccess)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 20 expected esuccess");
+            ::fast_io::fast_terminate();
+        }
 
         // verify created at CWD: "x"
         try
@@ -831,6 +917,7 @@ int main()
         }
         catch(::fast_io::error)
         {
+            ::fast_io::io::perrln("error: pcd64 Case 20 verify created failed");
             ::fast_io::fast_terminate();
         }
 
@@ -886,7 +973,11 @@ int main()
                                                                                              static_cast<wasi_posix_fd_wasm64_t>(3),
                                                                                              p,
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_ro_a/no") - 1u));
-        if(!(ret == errno_wasm64_t::eacces || ret == errno_wasm64_t::eperm)) { ::fast_io::fast_terminate(); }
+        if(!(ret == errno_wasm64_t::eacces || ret == errno_wasm64_t::eperm))
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 21 expected eacces/eperm");
+            ::fast_io::fast_terminate();
+        }
 
         // restore and cleanup
         try
@@ -934,7 +1025,11 @@ int main()
                                                                                 static_cast<wasi_posix_fd_wasm64_t>(3),
                                                                                 p,
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_link_to_file/x") - 1u));
-        if(ret != errno_wasm64_t::enotdir) { ::fast_io::fast_terminate(); }
+        if(ret != errno_wasm64_t::enotdir)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 22 expected enotdir");
+            ::fast_io::fast_terminate();
+        }
 
         // cleanup
         try
