@@ -600,6 +600,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                         {
                             path_stack.pop_back_unchecked();
                         }
+
+                        break;
                     }
                     case ::uwvm2::imported::wasi::wasip1::func::dir_type_e::next:
                     {
@@ -760,6 +762,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                                     curr_path_stack.push_back(next);
                                                 }
                                             }
+                                            
+                                            break;
                                         }
                                         [[unlikely]] default:
                                         {
