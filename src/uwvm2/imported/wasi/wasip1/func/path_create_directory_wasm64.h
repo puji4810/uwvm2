@@ -544,7 +544,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 #endif
                             {
                                 // mkdirat is symlink_nofollow
-                                ::fast_io::native_mkdirat(at(curr_fd_native_file), next_name);
+                                ::fast_io::native_mkdirat(at(curr_fd_native_file), next_name, static_cast<::fast_io::perms>(0777));
                             }
 #ifdef UWVM_CPP_EXCEPTIONS
                             catch(::fast_io::error e)
@@ -562,7 +562,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 #endif
                             {
                                 // mkdirat is symlink_nofollow
-                                ::fast_io::native_mkdirat(at(path_stack.back_unchecked()), next_name);
+                                ::fast_io::native_mkdirat(at(path_stack.back_unchecked()), next_name, static_cast<::fast_io::perms>(0777));
                             }
 #ifdef UWVM_CPP_EXCEPTIONS
                             catch(::fast_io::error e)

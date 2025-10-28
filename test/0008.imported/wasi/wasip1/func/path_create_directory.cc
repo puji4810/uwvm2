@@ -699,6 +699,238 @@ int main()
         }
     }
 
+    // Case 18: symlink to absolute path (e.g., /etc) -> eperm
+    {
+        try
+        {
+            ::fast_io::native_symlinkat(u8"/etc", ::fast_io::at_fdcwd(), u8"pcd32_abs");
+        }
+        catch(::fast_io::error)
+        {
+        }
+
+        constexpr wasi_void_ptr_t p{45056u};
+        constexpr auto s = u8"pcd32_abs/hack";
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm32(
+            memory,
+            p,
+            reinterpret_cast<::std::byte const*>(s),
+            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd32_abs/hack") - 1u);
+
+        auto const ret = ::uwvm2::imported::wasi::wasip1::func::path_create_directory(
+            env, static_cast<wasi_posix_fd_t>(3), p, static_cast<wasi_size_t>(sizeof(u8"pcd32_abs/hack") - 1u));
+        if(ret != errno_t::eperm) { ::fast_io::fast_terminate(); }
+
+        try
+        {
+            ::fast_io::native_unlinkat(::fast_io::at_fdcwd(), u8"pcd32_abs", {});
+        }
+        catch(::fast_io::error)
+        {
+        }
+    }
+
+    // Case 19: two-node symlink loop A<->B -> eloop
+    {
+        try
+        {
+            ::fast_io::native_symlinkat(u8"pcd32_loop2_b", ::fast_io::at_fdcwd(), u8"pcd32_loop2_a");
+            ::fast_io::native_symlinkat(u8"pcd32_loop2_a", ::fast_io::at_fdcwd(), u8"pcd32_loop2_b");
+        }
+        catch(::fast_io::error)
+        {
+        }
+
+        constexpr wasi_void_ptr_t p{47104u};
+        constexpr auto s = u8"pcd32_loop2_a/x";
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm32(
+            memory,
+            p,
+            reinterpret_cast<::std::byte const*>(s),
+            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd32_loop2_a/x") - 1u);
+
+        auto const ret = ::uwvm2::imported::wasi::wasip1::func::path_create_directory(
+            env, static_cast<wasi_posix_fd_t>(3), p, static_cast<wasi_size_t>(sizeof(u8"pcd32_loop2_a/x") - 1u));
+        if(ret != errno_t::eloop) { ::fast_io::fast_terminate(); }
+
+        try
+        {
+            ::fast_io::native_unlinkat(::fast_io::at_fdcwd(), u8"pcd32_loop2_a", {});
+        }
+        catch(::fast_io::error)
+        {
+        }
+        try
+        {
+            ::fast_io::native_unlinkat(::fast_io::at_fdcwd(), u8"pcd32_loop2_b", {});
+        }
+        catch(::fast_io::error)
+        {
+        }
+    }
+
+    // Case 20: symlink to ".." inside subdir -> esuccess (pcd32_escape_a/up/x -> x)
+    {
+        try
+        {
+            ::fast_io::native_unlinkat(::fast_io::at_fdcwd(), u8"x", ::fast_io::native_at_flags::removedir);
+        }
+        catch(::fast_io::error)
+        {
+        }
+        try
+        {
+            ::fast_io::native_mkdirat(::fast_io::at_fdcwd(), u8"pcd32_escape_a");
+        }
+        catch(::fast_io::error)
+        {
+        }
+        try
+        {
+            ::fast_io::native_symlinkat(u8"..", ::fast_io::at_fdcwd(), u8"pcd32_escape_a/up");
+        }
+        catch(::fast_io::error)
+        {
+        }
+
+        constexpr wasi_void_ptr_t p{49152u};
+        constexpr auto s = u8"pcd32_escape_a/up/x";
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm32(
+            memory,
+            p,
+            reinterpret_cast<::std::byte const*>(s),
+            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd32_escape_a/up/x") - 1u);
+
+        auto const ret = ::uwvm2::imported::wasi::wasip1::func::path_create_directory(
+            env, static_cast<wasi_posix_fd_t>(3), p, static_cast<wasi_size_t>(sizeof(u8"pcd32_escape_a/up/x") - 1u));
+        if(ret != errno_t::esuccess) { ::fast_io::fast_terminate(); }
+
+        // verify created at CWD: "x"
+        try
+        {
+            ::fast_io::dir_file df{u8"x"};
+        }
+        catch(::fast_io::error)
+        {
+            ::fast_io::fast_terminate();
+        }
+
+        // cleanup created "x"
+        try
+        {
+            ::fast_io::native_unlinkat(::fast_io::at_fdcwd(), u8"x", ::fast_io::native_at_flags::removedir);
+        }
+        catch(::fast_io::error)
+        {
+        }
+        try
+        {
+            ::fast_io::native_unlinkat(::fast_io::at_fdcwd(), u8"pcd32_escape_a/up", {});
+        }
+        catch(::fast_io::error)
+        {
+        }
+        try
+        {
+            ::fast_io::native_unlinkat(::fast_io::at_fdcwd(), u8"pcd32_escape_a", ::fast_io::native_at_flags::removedir);
+        }
+        catch(::fast_io::error)
+        {
+        }
+    }
+
+    // Case 21: permission boundary on parent dir -> eacces/eperm
+    {
+        try
+        {
+            ::fast_io::native_mkdirat(::fast_io::at_fdcwd(), u8"pcd32_ro_a");
+        }
+        catch(::fast_io::error)
+        {
+        }
+        try
+        {
+            ::fast_io::native_fchmodat(::fast_io::at_fdcwd(), u8"pcd32_ro_a", static_cast<::fast_io::perms>(0555));
+        }
+        catch(::fast_io::error)
+        {
+        }
+
+        constexpr wasi_void_ptr_t p{51200u};
+        constexpr auto s = u8"pcd32_ro_a/no";
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm32(
+            memory,
+            p,
+            reinterpret_cast<::std::byte const*>(s),
+            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd32_ro_a/no") - 1u);
+
+        auto const ret = ::uwvm2::imported::wasi::wasip1::func::path_create_directory(
+            env, static_cast<wasi_posix_fd_t>(3), p, static_cast<wasi_size_t>(sizeof(u8"pcd32_ro_a/no") - 1u));
+        if(!(ret == errno_t::eacces || ret == errno_t::eperm)) { ::fast_io::fast_terminate(); }
+
+        // restore and cleanup
+        try
+        {
+            ::fast_io::native_fchmodat(::fast_io::at_fdcwd(), u8"pcd32_ro_a", static_cast<::fast_io::perms>(0777));
+        }
+        catch(::fast_io::error)
+        {
+        }
+        try
+        {
+            ::fast_io::native_unlinkat(::fast_io::at_fdcwd(), u8"pcd32_ro_a", ::fast_io::native_at_flags::removedir);
+        }
+        catch(::fast_io::error)
+        {
+        }
+    }
+
+    // Case 22: symlink to a file as intermediate -> enotdir
+    {
+        try
+        {
+            ::fast_io::native_file f{u8"pcd32_file", ::fast_io::open_mode::out};
+        }
+        catch(::fast_io::error)
+        {
+        }
+        try
+        {
+            ::fast_io::native_symlinkat(u8"pcd32_file", ::fast_io::at_fdcwd(), u8"pcd32_link_to_file");
+        }
+        catch(::fast_io::error)
+        {
+        }
+
+        constexpr wasi_void_ptr_t p{53248u};
+        constexpr auto s = u8"pcd32_link_to_file/x";
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm32(
+            memory,
+            p,
+            reinterpret_cast<::std::byte const*>(s),
+            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd32_link_to_file/x") - 1u);
+
+        auto const ret = ::uwvm2::imported::wasi::wasip1::func::path_create_directory(
+            env, static_cast<wasi_posix_fd_t>(3), p, static_cast<wasi_size_t>(sizeof(u8"pcd32_link_to_file/x") - 1u));
+        if(ret != errno_t::enotdir) { ::fast_io::fast_terminate(); }
+
+        // cleanup
+        try
+        {
+            ::fast_io::native_unlinkat(::fast_io::at_fdcwd(), u8"pcd32_link_to_file", {});
+        }
+        catch(::fast_io::error)
+        {
+        }
+        try
+        {
+            ::fast_io::native_unlinkat(::fast_io::at_fdcwd(), u8"pcd32_file", {});
+        }
+        catch(::fast_io::error)
+        {
+        }
+    }
+
     return 0;
 }
 
