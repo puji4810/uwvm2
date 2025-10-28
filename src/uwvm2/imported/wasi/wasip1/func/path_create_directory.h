@@ -271,44 +271,6 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 
         auto const& curr_fd_native_file{curr_dir_stack_entry.ptr->dir_stack.file};
 
-        // check path (Copy from WASM memory for use)
-        ::uwvm2::utils::container::u8string path{};
-
-        {
-            // Full locking is required during reading.
-            [[maybe_unused]] auto const memory_locker_guard{::uwvm2::imported::wasi::wasip1::memory::lock_memory(memory)};
-
-            ::uwvm2::imported::wasi::wasip1::memory::check_memory_bounds_wasm32_unlocked(memory, path_ptrsz, path_len);
-
-            using char8_t_const_may_alias_ptr UWVM_GNU_MAY_ALIAS = char8_t const*;
-
-            auto const path_begin{memory.memory_begin + path_ptrsz};
-
-            path.assign(::uwvm2::utils::container::u8string_view{reinterpret_cast<char8_t_const_may_alias_ptr>(path_begin), path_len});
-        }
-
-        if(path.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval; }
-
-        // WASI does not guarantee that strings are null-terminated, so you must check for zero characters in the middle and construct one yourself.
-        auto const u8res{
-            ::uwvm2::utils::utf::check_legal_utf8<::uwvm2::utils::utf::utf8_specification::utf8_rfc3629_and_zero_illegal>(path.cbegin(), path.cend())};
-        if(u8res.err != ::uwvm2::utils::utf::utf_error_code::success) [[unlikely]]
-        {
-            // If the path string is not valid UTF-8, the function shall fail with ERRNO_ILSEQ.
-            return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eilseq;
-        }
-
-        auto const split_path_res{::uwvm2::imported::wasi::wasip1::func::split_path(::uwvm2::utils::container::u8string_view{path.data(), path.size()})};
-
-        // The path series functions in wasip1 reject absolute paths.
-        if(split_path_res.is_absolute) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm; }
-
-        ::uwvm2::utils::container::vector<::fast_io::dir_file> path_stack{};
-        path_stack.reserve(split_path_res.res.size());
-
-        // cend cannot be nullptr
-        auto const split_last{split_path_res.res.cend() - 1u};
-
         constexpr auto fast_io_error_to_erron{[](::fast_io::error e) constexpr noexcept -> ::uwvm2::imported::wasi::wasip1::abi::errno_t
                                               {
 #if defined(_WIN32) && !defined(__CYGWIN__)
@@ -503,6 +465,44 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 #endif
                                               }};
 
+        // check path (Copy from WASM memory for use)
+        ::uwvm2::utils::container::u8string path{};
+
+        {
+            // Full locking is required during reading.
+            [[maybe_unused]] auto const memory_locker_guard{::uwvm2::imported::wasi::wasip1::memory::lock_memory(memory)};
+
+            ::uwvm2::imported::wasi::wasip1::memory::check_memory_bounds_wasm32_unlocked(memory, path_ptrsz, path_len);
+
+            using char8_t_const_may_alias_ptr UWVM_GNU_MAY_ALIAS = char8_t const*;
+
+            auto const path_begin{memory.memory_begin + path_ptrsz};
+
+            path.assign(::uwvm2::utils::container::u8string_view{reinterpret_cast<char8_t_const_may_alias_ptr>(path_begin), path_len});
+        }
+
+        if(path.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval; }
+
+        // WASI does not guarantee that strings are null-terminated, so you must check for zero characters in the middle and construct one yourself.
+        auto const u8res{
+            ::uwvm2::utils::utf::check_legal_utf8<::uwvm2::utils::utf::utf8_specification::utf8_rfc3629_and_zero_illegal>(path.cbegin(), path.cend())};
+        if(u8res.err != ::uwvm2::utils::utf::utf_error_code::success) [[unlikely]]
+        {
+            // If the path string is not valid UTF-8, the function shall fail with ERRNO_ILSEQ.
+            return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eilseq;
+        }
+
+        auto const split_path_res{::uwvm2::imported::wasi::wasip1::func::split_path(::uwvm2::utils::container::u8string_view{path.data(), path.size()})};
+
+        // The path series functions in wasip1 reject absolute paths.
+        if(split_path_res.is_absolute) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm; }
+
+        ::uwvm2::utils::container::vector<::fast_io::dir_file> path_stack{};
+        path_stack.reserve(split_path_res.res.size());
+
+        // cend cannot be nullptr
+        auto const split_last{split_path_res.res.cend() - 1u};
+
         for(auto split_curr{split_path_res.res.cbegin()}; split_curr != split_path_res.res.cend(); ++split_curr)
         {
             if(split_curr == split_last)
@@ -595,18 +595,16 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                     }
                     case ::uwvm2::imported::wasi::wasip1::func::dir_type_e::next:
                     {
-
                         ::std::size_t symlink_depth{};
 
                         auto symlink_iterative{
-                            [fast_io_error_to_erron, &symlink_depth](
+                            [fast_io_error_to_erron, &symlink_depth, &curr_fd_native_file](
                                 this auto&& self,
                                 ::uwvm2::utils::container::vector<::fast_io::dir_file>& curr_path_stack,
                                 ::uwvm2::utils::container::u8string_view symlink_symbol) constexpr noexcept -> ::uwvm2::imported::wasi::wasip1::abi::errno_t
                             {
                                 constexpr ::std::size_t max_symlink_depth{40uz};
                                 if(symlink_depth > max_symlink_depth) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eloop; }
-
                                 ++symlink_depth;
 
                                 if(symlink_symbol.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval; }
@@ -641,6 +639,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                             {
                                                 curr_path_stack.pop_back_unchecked();
                                             }
+
                                             break;
                                         }
                                         case ::uwvm2::imported::wasi::wasip1::func::dir_type_e::next:
@@ -650,46 +649,93 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                             ::uwvm2::utils::container::u8string symlink_symbol{};
                                             bool is_symlink{};
 
-#ifdef UWVM_CPP_EXCEPTIONS
-                                            try
-#endif
+                                            if(curr_path_stack.empty())
                                             {
-                                                // readlinkat is symlink_nofollow
-                                                symlink_symbol = ::fast_io::native_readlinkat<char8_t>(at(curr_path_stack.back_unchecked()), next_name);
-                                                is_symlink = true;
-                                            }
-#ifdef UWVM_CPP_EXCEPTIONS
-                                            catch(::fast_io::error e)
-                                            {
-                                            }
-#endif
-
-                                            if(is_symlink)
-                                            {
-                                                if(symlink_symbol.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio; }
-
-                                                auto const errno_t{symlink_iterative(self, curr_path_stack, symlink_symbol)};
-                                                if(errno_t != ::uwvm2::imported::wasi::wasip1::abi::errno_t::esuccess) [[unlikely]] { return errno_t; }
-                                            }
-                                            else
-                                            {
-                                                ::fast_io::dir_file next{};
 #ifdef UWVM_CPP_EXCEPTIONS
                                                 try
 #endif
                                                 {
-                                                    next = ::fast_io::dir_file{at(curr_path_stack.back_unchecked()),
-                                                                               next_name,
-                                                                               ::fast_io::open_mode::directory | ::fast_io::open_mode::symlink_nofollow};
+                                                    // readlinkat is symlink_nofollow
+                                                    symlink_symbol = ::fast_io::native_readlinkat<char8_t>(at(curr_fd_native_file), next_name);
+                                                    is_symlink = true;
                                                 }
 #ifdef UWVM_CPP_EXCEPTIONS
                                                 catch(::fast_io::error e)
                                                 {
-                                                    return fast_io_error_to_erron(e);
                                                 }
 #endif
 
-                                                curr_path_stack.push_back(next);
+                                                if(is_symlink)
+                                                {
+                                                    if(symlink_symbol.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio; }
+
+                                                    auto const errno_t{symlink_iterative(self, curr_path_stack, symlink_symbol)};
+                                                    if(errno_t != ::uwvm2::imported::wasi::wasip1::abi::errno_t::esuccess) [[unlikely]] { return errno_t; }
+                                                }
+                                                else
+                                                {
+                                                    ::fast_io::dir_file next{};
+#ifdef UWVM_CPP_EXCEPTIONS
+                                                    try
+#endif
+                                                    {
+                                                        next = ::fast_io::dir_file{at(curr_fd_native_file),
+                                                                                   next_name,
+                                                                                   ::fast_io::open_mode::directory | ::fast_io::open_mode::symlink_nofollow};
+                                                    }
+#ifdef UWVM_CPP_EXCEPTIONS
+                                                    catch(::fast_io::error e)
+                                                    {
+                                                        return fast_io_error_to_erron(e);
+                                                    }
+#endif
+
+                                                    curr_path_stack.push_back(next);
+                                                }
+                                            }
+                                            else
+                                            {
+#ifdef UWVM_CPP_EXCEPTIONS
+                                                try
+#endif
+                                                {
+                                                    // readlinkat is symlink_nofollow
+                                                    symlink_symbol = ::fast_io::native_readlinkat<char8_t>(at(curr_path_stack.back_unchecked()), next_name);
+                                                    is_symlink = true;
+                                                }
+#ifdef UWVM_CPP_EXCEPTIONS
+                                                catch(::fast_io::error e)
+                                                {
+                                                }
+#endif
+
+                                                if(is_symlink)
+                                                {
+                                                    if(symlink_symbol.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio; }
+
+                                                    auto const errno_t{symlink_iterative(self, curr_path_stack, symlink_symbol)};
+                                                    if(errno_t != ::uwvm2::imported::wasi::wasip1::abi::errno_t::esuccess) [[unlikely]] { return errno_t; }
+                                                }
+                                                else
+                                                {
+                                                    ::fast_io::dir_file next{};
+#ifdef UWVM_CPP_EXCEPTIONS
+                                                    try
+#endif
+                                                    {
+                                                        next = ::fast_io::dir_file{at(curr_path_stack.back_unchecked()),
+                                                                                   next_name,
+                                                                                   ::fast_io::open_mode::directory | ::fast_io::open_mode::symlink_nofollow};
+                                                    }
+#ifdef UWVM_CPP_EXCEPTIONS
+                                                    catch(::fast_io::error e)
+                                                    {
+                                                        return fast_io_error_to_erron(e);
+                                                    }
+#endif
+
+                                                    curr_path_stack.push_back(next);
+                                                }
                                             }
                                         }
                                         [[unlikely]] default:
