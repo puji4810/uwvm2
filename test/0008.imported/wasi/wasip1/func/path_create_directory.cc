@@ -208,6 +208,15 @@ int main()
 
     // Case 6: success create and cleanup
     {
+        // cleanup (ignore failures)
+        try
+        {
+            ::fast_io::native_unlinkat(::fast_io::at_fdcwd(), u8"uwvm_ut_pcd32_ok", ::fast_io::native_at_flags::removedir);
+        }
+        catch(::fast_io::error)
+        {
+        }
+
         constexpr wasi_void_ptr_t p{20480u};
         constexpr auto s = u8"uwvm_ut_pcd32_ok";
         ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm32(memory,
