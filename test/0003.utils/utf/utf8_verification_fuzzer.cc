@@ -23,8 +23,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
-#include <concepts>
-#include <memory>
 #include <random>
 
 #ifndef UWVM_MODULE
@@ -37,7 +35,7 @@
 # error "Module testing is not currently supported"
 #endif
 
-inline ::uwvm2::utils::utf::u8result reference_check_legal_utf8_rfc3629_unchecked(const char8_t* str_begin, const char8_t* str_end) noexcept
+inline ::uwvm2::utils::utf::u8result reference_check_legal_utf8_rfc3629_unchecked(char8_t const* str_begin, char8_t const* str_end) noexcept
 {
     char8_t const* current = str_begin;
     while(current < str_end)
@@ -64,7 +62,10 @@ inline ::uwvm2::utils::utf::u8result reference_check_legal_utf8_rfc3629_unchecke
             {
                 return {current, ::uwvm2::utils::utf::utf_error_code::too_long_sequence};
             }
-            else { return {current, ::uwvm2::utils::utf::utf_error_code::long_header_bits}; }
+            else
+            {
+                return {current, ::uwvm2::utils::utf::utf_error_code::long_header_bits};
+            }
         }
 
         // Check if the sequence length is sufficient
@@ -131,7 +132,10 @@ inline ::uwvm2::utils::container::u8string generate_random_utf8_data(::std::size
                 case 3: data.push_back(0xE0 + (byte_engine(eng) % 0x10)); break;
             }
         }
-        else { data.push_back(byte_engine(eng)); }
+        else
+        {
+            data.push_back(byte_engine(eng));
+        }
     }
     return data;
 }
@@ -198,11 +202,84 @@ inline void run_fuzzer_tests(::std::size_t num_tests) noexcept
     }
 }
 
+// Fixed-length random read tests for lengths: 4, 8, 16, 32, 64, 128
+inline void run_fixed_length_random_read_tests(::std::size_t runs_per_length) noexcept
+{
+    ::std::size_t const lengths[] = {4uz, 5uz, 8uz, 9uz, 16uz, 17uz, 32uz, 33uz, 64uz, 65uz, 128uz, 129uz};
+
+    for(auto len: lengths)
+    {
+        for(::std::size_t i = 0; i < runs_per_length; ++i)
+        {
+            auto data_vec = generate_random_utf8_data(len, len, i % 100uz);
+            if(data_vec.empty()) { continue; }
+
+            char8_t const* data = reinterpret_cast<char8_t const*>(data_vec.data());
+            char8_t const* end = data + data_vec.size();
+
+            // reference implementation
+            ::uwvm2::utils::utf::u8result ref_result = reference_check_legal_utf8_rfc3629_unchecked(data, end);
+
+            // Test implementation (zero_illegal = false)
+            ::uwvm2::utils::utf::u8result test_result_false = ::uwvm2::utils::utf::check_legal_utf8_rfc3629_unchecked<false>(data, end);
+
+            // Comparative results
+            if(test_result_false.err != ref_result.err || test_result_false.pos != ref_result.pos)
+            {
+                ::fast_io::io::perr("Fixed-length test failed (zero_illegal=false):\n");
+                ::fast_io::io::perr("  Length: ", len, ", Run: ", i, "\n");
+                ::fast_io::io::perr("  Input: ");
+                for(auto b: data_vec) { ::fast_io::io::perr(::fast_io::mnp::hexupper<false, true>(b), " "); }
+                ::fast_io::io::perrln("\n  Expected: err=",
+                                      static_cast<int>(ref_result.err),
+                                      ", pos=",
+                                      (ref_result.pos - data),
+                                      "\n  Actual: err=",
+                                      static_cast<int>(test_result_false.err),
+                                      ", pos=",
+                                      (test_result_false.pos - data));
+                ::fast_io::fast_terminate();
+            }
+
+            // Test implementation (zero_illegal = true)
+            ::uwvm2::utils::utf::u8result test_result_true = ::uwvm2::utils::utf::check_legal_utf8_rfc3629_unchecked<true>(data, end);
+
+            char8_t const* first_null = nullptr;
+            for(char8_t const* p = data; p != end; ++p)
+            {
+                if(*p == 0)
+                {
+                    first_null = p;
+                    break;
+                }
+            }
+
+            if(first_null && test_result_true.err == ::uwvm2::utils::utf::utf_error_code::contains_empty_characters)
+            {
+                if(test_result_true.pos != first_null)
+                {
+                    ::fast_io::io::perr("Fixed-length test failed (zero_illegal=true):\n");
+                    ::fast_io::io::perr("  Length: ", len, ", Run: ", i, "\n");
+                    ::fast_io::io::perr("  Input: ");
+                    for(auto b: data_vec) { ::fast_io::io::perr(::fast_io::mnp::hexupper<false, true>(b), " "); }
+                    ::fast_io::io::perrln("  Expected: contains_empty_characters at ", (first_null - data));
+                    ::fast_io::io::perrln("  Actual: err=", static_cast<int>(test_result_true.err), ", pos=", (test_result_true.pos - data));
+                    ::fast_io::fast_terminate();
+                }
+            }
+        }
+    }
+}
+
 int main()
 {
     constexpr size_t NUM_TESTS = 100'000;
     ::fast_io::io::perr("Running ", NUM_TESTS, " random UTF-8 fuzzer tests...\n");
     run_fuzzer_tests(NUM_TESTS);
+
+    constexpr size_t RUNS_PER_LENGTH = 10'000;
+    ::fast_io::io::perr("Running fixed-length random read tests (4,8,16,32,64,128) x ", RUNS_PER_LENGTH, "...\n");
+    run_fixed_length_random_read_tests(RUNS_PER_LENGTH);
 
     ::fast_io::io::perr("All tests passed successfully!\n");
     return 0;
