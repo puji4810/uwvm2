@@ -496,6 +496,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 
         // The path series functions in wasip1 reject absolute paths.
         if(split_path_res.is_absolute) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm; }
+        if(split_path_res.res.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval; }
 
         ::uwvm2::utils::container::vector<::fast_io::dir_file> path_stack{};
         path_stack.reserve(split_path_res.res.size());
@@ -579,6 +580,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             }
             else
             {
+                // The path traversed in the middle
+
                 switch(split_curr->dir_type)
                 {
                     case ::uwvm2::imported::wasi::wasip1::func::dir_type_e::curr:
@@ -669,7 +672,9 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                                 {
                                                     if(symlink_symbol.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio; }
 
-                                                    auto const errno_t{symlink_iterative(self, curr_path_stack, symlink_symbol)};
+                                                    auto const errno_t{
+                                                        self(curr_path_stack,
+                                                             ::uwvm2::utils::container::u8string_view{symlink_symbol.data(), symlink_symbol.size()})};
                                                     if(errno_t != ::uwvm2::imported::wasi::wasip1::abi::errno_t::esuccess) [[unlikely]] { return errno_t; }
                                                 }
                                                 else
@@ -679,9 +684,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                                     try
 #endif
                                                     {
-                                                        next = ::fast_io::dir_file{at(curr_fd_native_file),
-                                                                                   next_name,
-                                                                                   ::fast_io::open_mode::directory | ::fast_io::open_mode::symlink_nofollow};
+                                                        // default is symlink_nofollow
+                                                        next = ::fast_io::dir_file{at(curr_fd_native_file), next_name};
                                                     }
 #ifdef UWVM_CPP_EXCEPTIONS
                                                     catch(::fast_io::error e)
@@ -713,7 +717,9 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                                 {
                                                     if(symlink_symbol.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio; }
 
-                                                    auto const errno_t{symlink_iterative(self, curr_path_stack, symlink_symbol)};
+                                                    auto const errno_t{
+                                                        self(curr_path_stack,
+                                                             ::uwvm2::utils::container::u8string_view{symlink_symbol.data(), symlink_symbol.size()})};
                                                     if(errno_t != ::uwvm2::imported::wasi::wasip1::abi::errno_t::esuccess) [[unlikely]] { return errno_t; }
                                                 }
                                                 else
@@ -723,9 +729,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                                     try
 #endif
                                                     {
-                                                        next = ::fast_io::dir_file{at(curr_path_stack.back_unchecked()),
-                                                                                   next_name,
-                                                                                   ::fast_io::open_mode::directory | ::fast_io::open_mode::symlink_nofollow};
+                                                        // default is symlink_nofollow
+                                                        next = ::fast_io::dir_file{at(curr_path_stack.back_unchecked()), next_name};
                                                     }
 #ifdef UWVM_CPP_EXCEPTIONS
                                                     catch(::fast_io::error e)
@@ -776,7 +781,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                             {
                                 if(symlink_symbol.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio; }
 
-                                auto const errno_t{symlink_iterative(path_stack, symlink_symbol)};
+                                auto const errno_t{
+                                    symlink_iterative(path_stack, ::uwvm2::utils::container::u8string_view{symlink_symbol.data(), symlink_symbol.size()})};
                                 if(errno_t != ::uwvm2::imported::wasi::wasip1::abi::errno_t::esuccess) [[unlikely]] { return errno_t; }
                             }
                             else
@@ -786,9 +792,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                 try
 #endif
                                 {
-                                    next = ::fast_io::dir_file{at(curr_fd_native_file),
-                                                               next_name,
-                                                               ::fast_io::open_mode::directory | ::fast_io::open_mode::symlink_nofollow};
+                                    // default is symlink_nofollow
+                                    next = ::fast_io::dir_file{at(curr_fd_native_file), next_name};
                                 }
 #ifdef UWVM_CPP_EXCEPTIONS
                                 catch(::fast_io::error e)
@@ -820,7 +825,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                             {
                                 if(symlink_symbol.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio; }
 
-                                auto const errno_t{symlink_iterative(path_stack, symlink_symbol)};
+                                auto const errno_t{
+                                    symlink_iterative(path_stack, ::uwvm2::utils::container::u8string_view{symlink_symbol.data(), symlink_symbol.size()})};
                                 if(errno_t != ::uwvm2::imported::wasi::wasip1::abi::errno_t::esuccess) [[unlikely]] { return errno_t; }
                             }
                             else
@@ -830,9 +836,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                 try
 #endif
                                 {
-                                    next = ::fast_io::dir_file{at(path_stack.back_unchecked()),
-                                                               next_name,
-                                                               ::fast_io::open_mode::directory | ::fast_io::open_mode::symlink_nofollow};
+                                    // default is symlink_nofollow
+                                    next = ::fast_io::dir_file{at(path_stack.back_unchecked()), next_name};
                                 }
 #ifdef UWVM_CPP_EXCEPTIONS
                                 catch(::fast_io::error e)
