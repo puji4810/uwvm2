@@ -75,6 +75,8 @@ export import :fd_tell_wasm64;
 export import :fd_tell;
 export import :fd_write_wasm64;
 export import :fd_write;
+export import :path_create_directory_wasm64;
+export import :path_create_directory;
 
 #ifndef UWVM_MODULE
 # define UWVM_MODULE
