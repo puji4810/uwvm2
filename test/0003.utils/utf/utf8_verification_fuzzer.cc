@@ -202,12 +202,10 @@ inline void run_fuzzer_tests(::std::size_t num_tests) noexcept
     }
 }
 
-// Fixed-length random read tests for lengths: 4, 8, 16, 32, 64, 128
+// Fixed-length random read tests for lengths: 0..512
 inline void run_fixed_length_random_read_tests(::std::size_t runs_per_length) noexcept
 {
-    ::std::size_t const lengths[] = {4uz, 5uz, 8uz, 9uz, 16uz, 17uz, 32uz, 33uz, 64uz, 65uz, 128uz, 129uz};
-
-    for(auto len: lengths)
+    for(::std::size_t len = 0uz; len <= 512uz; ++len)
     {
         for(::std::size_t i = 0; i < runs_per_length; ++i)
         {
@@ -277,8 +275,8 @@ int main()
     ::fast_io::io::perr("Running ", NUM_TESTS, " random UTF-8 fuzzer tests...\n");
     run_fuzzer_tests(NUM_TESTS);
 
-    constexpr size_t RUNS_PER_LENGTH = 10'000;
-    ::fast_io::io::perr("Running fixed-length random read tests (4,8,16,32,64,128) x ", RUNS_PER_LENGTH, "...\n");
+    constexpr size_t RUNS_PER_LENGTH = 1'000;
+    ::fast_io::io::perr("Running fixed-length random read tests (0..512) x ", RUNS_PER_LENGTH, "...\n");
     run_fixed_length_random_read_tests(RUNS_PER_LENGTH);
 
     ::fast_io::io::perr("All tests passed successfully!\n");
