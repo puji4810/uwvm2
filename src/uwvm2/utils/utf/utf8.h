@@ -2722,6 +2722,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::utils::utf
                     }
                 }
 
+                if(str_curr == str_end) [[unlikely]] { return {str_curr, ::uwvm2::utils::utf::utf_error_code::success}; }
+
                 while(*str_curr < static_cast<char8_t>(0b1000'0000u))
                 {
                     if constexpr(zero_illegal)
@@ -3159,6 +3161,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::utils::utf
                             continue;
                         }
                     }
+
+                    if(str_curr == str_end) [[unlikely]] { return {str_curr, ::uwvm2::utils::utf::utf_error_code::success}; }
 
                     while(*str_curr < static_cast<char8_t>(0b1000'0000u))
                     {
