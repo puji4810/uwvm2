@@ -315,186 +315,384 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             {
                 // Create the final path
 
-                if(split_curr->dir_type != ::uwvm2::imported::wasi::wasip1::func::dir_type_e::next) [[unlikely]]
+                switch(split_curr->dir_type)
                 {
-                    // Create '.' or '..' directly reject (eexist).
-                    return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eexist;
-                }
+                    case ::uwvm2::imported::wasi::wasip1::func::dir_type_e::curr:
+                    {
+                        // Create '.' (eexist).
+                        return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eexist;
+                    }
+                    case ::uwvm2::imported::wasi::wasip1::func::dir_type_e::prev:
+                    {
+                        // Check if it does not exceed the boundary. If it exceeds the boundary, report a perm error; if it does not exceed the boundary, report
+                        // an exist error.
+                        if(path_stack.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm; }
+                        else
+                        {
+                            return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eexist;
+                        }
+                    }
+                    case ::uwvm2::imported::wasi::wasip1::func::dir_type_e::next:
+                    {
+                        auto const& next_name{split_curr->next_name};
 
-                auto const& next_name{split_curr->next_name};
-                
+                        if(path_stack.empty())
+                        {
+// Create a directory based on curr_dir
+#ifdef UWVM_CPP_EXCEPTIONS
+                            try
+#endif
+                            {
+                                ::fast_io::native_mkdirat(at(curr_fd_native_file), next_name);
+                            }
+#ifdef UWVM_CPP_EXCEPTIONS
+                            catch(::fast_io::error e)
+                            {
+# if defined(_WIN32) && !defined(__CYGWIN__)
+                                switch(e.domain)
+                                {
+                                    case ::fast_io::win32_domain_value:
+                                    {
+                                        switch(e.code)
+                                        {
+                                            // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here,
+                                            // “eio” is used instead.
+                                            case 6uz /*ERROR_INVALID_HANDLE*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                            case 5uz /*ERROR_ACCESS_DENIED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
+                                            case 1uz /*ERROR_INVALID_FUNCTION*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enosys;
+                                            case 50uz /*ERROR_NOT_SUPPORTED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
+                                            case 19uz /*ERROR_WRITE_PROTECT*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
+                                            case 87uz /*ERROR_INVALID_PARAMETER*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
+                                            case 1117uz /*ERROR_IO_DEVICE*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                            case 31uz /*ERROR_GEN_FAILURE*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                            case 1784uz /*ERROR_INVALID_USER_BUFFER*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::efault;
+                                            case 2uz /*ERROR_FILE_NOT_FOUND*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
+                                            case 3uz /*ERROR_PATH_NOT_FOUND*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
+                                            case 4uz /*ERROR_TOO_MANY_OPEN_FILES*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::emfile;
+                                            case 24uz /*ERROR_BAD_LENGTH*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
+                                            case 25uz /*ERROR_SEEK*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
+                                            case 21uz /*ERROR_NOT_READY*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                            case 38uz /*ERROR_HANDLE_EOF*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                            case 112uz /*ERROR_DISK_FULL*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enospc;
+                                            case 12uz /*ERROR_INVALID_ACCESS*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
+                                            case 32uz /*ERROR_SHARING_VIOLATION*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::ebusy;
+                                            case 33uz /*ERROR_LOCK_VIOLATION*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eagain;
+                                            case 109uz /*ERROR_BROKEN_PIPE*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::epipe;
+                                            case 232uz /*ERROR_NO_DATA*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::epipe;
+                                            case 8uz /*ERROR_NOT_ENOUGH_MEMORY*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enomem;
+                                            case 14uz /*ERROR_OUTOFMEMORY*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enomem;
+                                            case 995uz /*ERROR_OPERATION_ABORTED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::ecanceled;
+                                            case 997uz /*ERROR_IO_PENDING*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einprogress;
+                                            case 267uz /*ERROR_DIRECTORY*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
+                                            case 183uz /*ERROR_ALREADY_EXISTS*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eexist;
+                                            case 206uz /*ERROR_FILENAME_EXCED_RANGE*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enametoolong;
+                                            default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                        }
+
+                                        break;
+                                    }
+#  if !defined(_WIN32_WINDOWS)
+                                    case ::fast_io::nt_domain_value:
+                                    {
+                                        static_assert(sizeof(::fast_io::error::value_type) >= sizeof(::std::uint_least32_t));
+                                        switch(e.code)
+                                        {
+                                            // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here,
+                                            // “eio” is used instead.
+                                            case 0xC0000008uz /*STATUS_INVALID_HANDLE*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                            case 0xC0000022uz /*STATUS_ACCESS_DENIED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
+                                            case 0xC0000002uz /*STATUS_NOT_IMPLEMENTED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enosys;
+                                            case 0xC00000BBuz /*STATUS_NOT_SUPPORTED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
+                                            case 0xC00000A2uz /*STATUS_MEDIA_WRITE_PROTECTED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
+                                            case 0xC000000Duz /*STATUS_INVALID_PARAMETER*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
+                                            case 0xC0000185uz /*STATUS_IO_DEVICE_ERROR*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                            case 0xC0000001uz /*STATUS_UNSUCCESSFUL*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                            case 0xC00000E8uz /*STATUS_INVALID_USER_BUFFER*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::efault;
+                                            case 0xC0000034uz /* STATUS_OBJECT_NAME_NOT_FOUND */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
+                                            case 0xC000003Auz /* STATUS_OBJECT_PATH_NOT_FOUND */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
+                                            case 0xC0000043uz /* STATUS_SHARING_VIOLATION */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::ebusy;
+                                            case 0xC0000054uz /* STATUS_FILE_LOCK_CONFLICT */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eagain;
+                                            case 0xC000007Fuz /* STATUS_DISK_FULL */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enospc;
+                                            case 0xC0000010uz /* STATUS_INVALID_DEVICE_REQUEST */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enosys;
+                                            case 0xC0000011uz /* STATUS_END_OF_FILE */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                            case 0xC0000013uz /* STATUS_NO_MEDIA_IN_DEVICE */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
+                                            case 0xC000000Euz /* STATUS_NO_SUCH_DEVICE */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
+                                            case 0xC0000101uz /* STATUS_DIRECTORY_NOT_EMPTY */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotempty;
+                                            case 0xC0000281uz /* STATUS_DIRECTORY_IS_A_REPARSE_POINT */:
+                                                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                            case 0xC00000BAuz /* STATUS_FILE_IS_A_DIRECTORY */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
+                                            case 0xC000009Auz /* STATUS_INSUFFICIENT_RESOURCES */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enomem;
+                                            case 0xC0000017uz /* STATUS_NO_MEMORY */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enomem;
+                                            case 0xC0000120uz /*STATUS_CANCELLED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::ecanceled;
+                                            case 0x00000103uz /*STATUS_PENDING*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einprogress;
+                                            case 0xC000014Buz /*STATUS_PIPE_BROKEN*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::epipe;
+                                            case 0xC0000035uz /*STATUS_OBJECT_NAME_COLLISION*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eexist;
+                                            case 0xC0000106uz /*STATUS_NAME_TOO_LONG*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enametoolong;
+                                            default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                        }
+
+                                        break;
+                                    }
+#  endif
+                                    [[unlikely]] default:
+                                    {
+#  if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                                        // Security issues inherent to virtual machines
+                                        ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#  endif
+                                        return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                    }
+                                }
+# else
+                                switch(e.code)
+                                {
+                                    // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here, “eio” is
+                                    // used instead.
+                                    case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                    case ENOSPC: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enospc;
+                                    case EFBIG: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::efbig;
+                                    case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
+                                    case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
+                                    case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm;
+                                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
+                                    case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
+#  if defined(EDQUOT)
+                                    case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::edquot;
+#  endif
+                                    case EINTR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eintr;
+#  if defined(EWOULDBLOCK) && (!defined(EAGAIN) || (EAGAIN != EWOULDBLOCK))
+                                    case EWOULDBLOCK: [[fallthrough]];
+#  endif
+                                    case EAGAIN: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eagain;
+                                    case ESPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
+#  if defined(EOPNOTSUPP) && (!defined(ENOTSUP) || (ENOTSUP != EOPNOTSUPP))
+                                    case EOPNOTSUPP: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
+#  endif
+#  if defined(ENOTSUP)
+                                    case ENOTSUP: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
+#  endif
+                                    case EFAULT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::efault;
+                                    case ENXIO: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enxio;
+                                    case ENODEV: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enodev;
+                                    case ENOENT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
+                                    case ENOTDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotdir;
+                                    case EIO: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                    case ENOMEM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enomem;
+                                    case EOVERFLOW: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eoverflow;
+#  if defined(ETIMEDOUT)
+                                    case ETIMEDOUT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::etimedout;
+#  endif
+#  if defined(ECONNRESET)
+                                    case ECONNRESET: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::econnreset;
+#  endif
+#  if defined(EPIPE)
+                                    case EPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::epipe;
+#  endif
+#  if defined(EEXIST)
+                                    case EEXIST: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eexist;
+#  endif
+#  if defined(ENAMETOOLONG)
+                                    case ENAMETOOLONG: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enametoolong;
+#  endif
+#  if defined(ELOOP)
+                                    case ELOOP: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eloop;
+#  endif
+#  if defined(EMLINK)
+                                    case EMLINK: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::emlink;
+#  endif
+                                    default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                }
+# endif
+                            }
+#endif
+                        }
+                        else
+                        {
+
+                            // Create a directory based on dir.back()
+#ifdef UWVM_CPP_EXCEPTIONS
+                            try
+#endif
+                            {
+                                ::fast_io::native_mkdirat(at(path_stack.back_unchecked()), next_name);
+                            }
+#ifdef UWVM_CPP_EXCEPTIONS
+                            catch(::fast_io::error e)
+                            {
+# if defined(_WIN32) && !defined(__CYGWIN__)
+                                switch(e.domain)
+                                {
+                                    case ::fast_io::win32_domain_value:
+                                    {
+                                        switch(e.code)
+                                        {
+                                            // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here,
+                                            // “eio” is used instead.
+                                            case 6uz /*ERROR_INVALID_HANDLE*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                            case 5uz /*ERROR_ACCESS_DENIED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
+                                            case 1uz /*ERROR_INVALID_FUNCTION*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enosys;
+                                            case 50uz /*ERROR_NOT_SUPPORTED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
+                                            case 19uz /*ERROR_WRITE_PROTECT*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
+                                            case 87uz /*ERROR_INVALID_PARAMETER*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
+                                            case 1117uz /*ERROR_IO_DEVICE*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                            case 31uz /*ERROR_GEN_FAILURE*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                            case 1784uz /*ERROR_INVALID_USER_BUFFER*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::efault;
+                                            case 2uz /*ERROR_FILE_NOT_FOUND*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
+                                            case 3uz /*ERROR_PATH_NOT_FOUND*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
+                                            case 4uz /*ERROR_TOO_MANY_OPEN_FILES*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::emfile;
+                                            case 24uz /*ERROR_BAD_LENGTH*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
+                                            case 25uz /*ERROR_SEEK*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
+                                            case 21uz /*ERROR_NOT_READY*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                            case 38uz /*ERROR_HANDLE_EOF*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                            case 112uz /*ERROR_DISK_FULL*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enospc;
+                                            case 12uz /*ERROR_INVALID_ACCESS*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
+                                            case 32uz /*ERROR_SHARING_VIOLATION*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::ebusy;
+                                            case 33uz /*ERROR_LOCK_VIOLATION*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eagain;
+                                            case 109uz /*ERROR_BROKEN_PIPE*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::epipe;
+                                            case 232uz /*ERROR_NO_DATA*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::epipe;
+                                            case 8uz /*ERROR_NOT_ENOUGH_MEMORY*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enomem;
+                                            case 14uz /*ERROR_OUTOFMEMORY*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enomem;
+                                            case 995uz /*ERROR_OPERATION_ABORTED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::ecanceled;
+                                            case 997uz /*ERROR_IO_PENDING*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einprogress;
+                                            case 267uz /*ERROR_DIRECTORY*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
+                                            case 183uz /*ERROR_ALREADY_EXISTS*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eexist;
+                                            case 206uz /*ERROR_FILENAME_EXCED_RANGE*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enametoolong;
+                                            default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                        }
+
+                                        break;
+                                    }
+#  if !defined(_WIN32_WINDOWS)
+                                    case ::fast_io::nt_domain_value:
+                                    {
+                                        static_assert(sizeof(::fast_io::error::value_type) >= sizeof(::std::uint_least32_t));
+                                        switch(e.code)
+                                        {
+                                            // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here,
+                                            // “eio” is used instead.
+                                            case 0xC0000008uz /*STATUS_INVALID_HANDLE*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                            case 0xC0000022uz /*STATUS_ACCESS_DENIED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
+                                            case 0xC0000002uz /*STATUS_NOT_IMPLEMENTED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enosys;
+                                            case 0xC00000BBuz /*STATUS_NOT_SUPPORTED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
+                                            case 0xC00000A2uz /*STATUS_MEDIA_WRITE_PROTECTED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
+                                            case 0xC000000Duz /*STATUS_INVALID_PARAMETER*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
+                                            case 0xC0000185uz /*STATUS_IO_DEVICE_ERROR*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                            case 0xC0000001uz /*STATUS_UNSUCCESSFUL*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                            case 0xC00000E8uz /*STATUS_INVALID_USER_BUFFER*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::efault;
+                                            case 0xC0000034uz /* STATUS_OBJECT_NAME_NOT_FOUND */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
+                                            case 0xC000003Auz /* STATUS_OBJECT_PATH_NOT_FOUND */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
+                                            case 0xC0000043uz /* STATUS_SHARING_VIOLATION */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::ebusy;
+                                            case 0xC0000054uz /* STATUS_FILE_LOCK_CONFLICT */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eagain;
+                                            case 0xC000007Fuz /* STATUS_DISK_FULL */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enospc;
+                                            case 0xC0000010uz /* STATUS_INVALID_DEVICE_REQUEST */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enosys;
+                                            case 0xC0000011uz /* STATUS_END_OF_FILE */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                            case 0xC0000013uz /* STATUS_NO_MEDIA_IN_DEVICE */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
+                                            case 0xC000000Euz /* STATUS_NO_SUCH_DEVICE */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
+                                            case 0xC0000101uz /* STATUS_DIRECTORY_NOT_EMPTY */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotempty;
+                                            case 0xC0000281uz /* STATUS_DIRECTORY_IS_A_REPARSE_POINT */:
+                                                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                            case 0xC00000BAuz /* STATUS_FILE_IS_A_DIRECTORY */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
+                                            case 0xC000009Auz /* STATUS_INSUFFICIENT_RESOURCES */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enomem;
+                                            case 0xC0000017uz /* STATUS_NO_MEMORY */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enomem;
+                                            case 0xC0000120uz /*STATUS_CANCELLED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::ecanceled;
+                                            case 0x00000103uz /*STATUS_PENDING*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einprogress;
+                                            case 0xC000014Buz /*STATUS_PIPE_BROKEN*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::epipe;
+                                            case 0xC0000035uz /*STATUS_OBJECT_NAME_COLLISION*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eexist;
+                                            case 0xC0000106uz /*STATUS_NAME_TOO_LONG*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enametoolong;
+                                            default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                        }
+
+                                        break;
+                                    }
+#  endif
+                                    [[unlikely]] default:
+                                    {
+#  if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                                        // Security issues inherent to virtual machines
+                                        ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#  endif
+                                        return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                    }
+                                }
+# else
+                                switch(e.code)
+                                {
+                                    // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here, “eio” is
+                                    // used instead.
+                                    case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                    case ENOSPC: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enospc;
+                                    case EFBIG: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::efbig;
+                                    case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
+                                    case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
+                                    case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm;
+                                    case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
+                                    case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
+#  if defined(EDQUOT)
+                                    case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::edquot;
+#  endif
+                                    case EINTR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eintr;
+#  if defined(EWOULDBLOCK) && (!defined(EAGAIN) || (EAGAIN != EWOULDBLOCK))
+                                    case EWOULDBLOCK: [[fallthrough]];
+#  endif
+                                    case EAGAIN: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eagain;
+                                    case ESPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
+#  if defined(EOPNOTSUPP) && (!defined(ENOTSUP) || (ENOTSUP != EOPNOTSUPP))
+                                    case EOPNOTSUPP: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
+#  endif
+#  if defined(ENOTSUP)
+                                    case ENOTSUP: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
+#  endif
+                                    case EFAULT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::efault;
+                                    case ENXIO: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enxio;
+                                    case ENODEV: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enodev;
+                                    case ENOENT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
+                                    case ENOTDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotdir;
+                                    case EIO: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                    case ENOMEM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enomem;
+                                    case EOVERFLOW: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eoverflow;
+#  if defined(ETIMEDOUT)
+                                    case ETIMEDOUT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::etimedout;
+#  endif
+#  if defined(ECONNRESET)
+                                    case ECONNRESET: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::econnreset;
+#  endif
+#  if defined(EPIPE)
+                                    case EPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::epipe;
+#  endif
+#  if defined(EEXIST)
+                                    case EEXIST: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eexist;
+#  endif
+#  if defined(ENAMETOOLONG)
+                                    case ENAMETOOLONG: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enametoolong;
+#  endif
+#  if defined(ELOOP)
+                                    case ELOOP: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eloop;
+#  endif
+#  if defined(EMLINK)
+                                    case EMLINK: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::emlink;
+#  endif
+                                    default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
+                                }
+# endif
+                            }
+#endif
+                        }
+
+                        break;
+                    }
+                    [[unlikely]] default:
+                    {
+#if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
+                        ::uwvm2::utils::debug::trap_and_inform_bug_pos();
+#endif
+                        ::std::unreachable();
+                    }
+                }
             }
             else
             {
             }
         }
-
-#ifdef UWVM_CPP_EXCEPTIONS
-        try
-#endif
-        {
-            // fast_io's native_mkdir creates new paths according to system rules, and nearly all systems will refuse to create paths recursively.
-            ::fast_io::native_mkdirat(at(curr_fd_native_file), path);
-        }
-#ifdef UWVM_CPP_EXCEPTIONS
-        catch(::fast_io::error e)
-        {
-# if defined(_WIN32) && !defined(__CYGWIN__)
-            switch(e.domain)
-            {
-                case ::fast_io::win32_domain_value:
-                {
-                    switch(e.code)
-                    {
-                        // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here,
-                        // “eio” is used instead.
-                        case 6uz /*ERROR_INVALID_HANDLE*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-                        case 5uz /*ERROR_ACCESS_DENIED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
-                        case 1uz /*ERROR_INVALID_FUNCTION*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enosys;
-                        case 50uz /*ERROR_NOT_SUPPORTED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
-                        case 19uz /*ERROR_WRITE_PROTECT*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
-                        case 87uz /*ERROR_INVALID_PARAMETER*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
-                        case 1117uz /*ERROR_IO_DEVICE*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-                        case 31uz /*ERROR_GEN_FAILURE*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-                        case 1784uz /*ERROR_INVALID_USER_BUFFER*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::efault;
-                        case 2uz /*ERROR_FILE_NOT_FOUND*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
-                        case 3uz /*ERROR_PATH_NOT_FOUND*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
-                        case 4uz /*ERROR_TOO_MANY_OPEN_FILES*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::emfile;
-                        case 24uz /*ERROR_BAD_LENGTH*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
-                        case 25uz /*ERROR_SEEK*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
-                        case 21uz /*ERROR_NOT_READY*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-                        case 38uz /*ERROR_HANDLE_EOF*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;  // write has no EOF concept
-                        case 112uz /*ERROR_DISK_FULL*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enospc;
-                        case 12uz /*ERROR_INVALID_ACCESS*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
-                        case 32uz /*ERROR_SHARING_VIOLATION*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::ebusy;
-                        case 33uz /*ERROR_LOCK_VIOLATION*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eagain;
-                        case 109uz /*ERROR_BROKEN_PIPE*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::epipe;
-                        case 232uz /*ERROR_NO_DATA*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::epipe;
-                        case 8uz /*ERROR_NOT_ENOUGH_MEMORY*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enomem;
-                        case 14uz /*ERROR_OUTOFMEMORY*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enomem;
-                        case 995uz /*ERROR_OPERATION_ABORTED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::ecanceled;
-                        case 997uz /*ERROR_IO_PENDING*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einprogress;
-                        case 267uz /*ERROR_DIRECTORY*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
-                        case 183uz /*ERROR_ALREADY_EXISTS*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eexist;
-                        case 206uz /*ERROR_FILENAME_EXCED_RANGE*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enametoolong;
-                        default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-                    }
-
-                    break;
-                }
-#  if !defined(_WIN32_WINDOWS)
-                case ::fast_io::nt_domain_value:
-                {
-                    static_assert(sizeof(::fast_io::error::value_type) >= sizeof(::std::uint_least32_t));
-                    switch(e.code)
-                    {
-                        // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here,
-                        // “eio” is used instead.
-                        case 0xC0000008uz /*STATUS_INVALID_HANDLE*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-                        case 0xC0000022uz /*STATUS_ACCESS_DENIED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
-                        case 0xC0000002uz /*STATUS_NOT_IMPLEMENTED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enosys;
-                        case 0xC00000BBuz /*STATUS_NOT_SUPPORTED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
-                        case 0xC00000A2uz /*STATUS_MEDIA_WRITE_PROTECTED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
-                        case 0xC000000Duz /*STATUS_INVALID_PARAMETER*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
-                        case 0xC0000185uz /*STATUS_IO_DEVICE_ERROR*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-                        case 0xC0000001uz /*STATUS_UNSUCCESSFUL*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-                        case 0xC00000E8uz /*STATUS_INVALID_USER_BUFFER*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::efault;
-                        case 0xC0000034uz /* STATUS_OBJECT_NAME_NOT_FOUND */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
-                        case 0xC000003Auz /* STATUS_OBJECT_PATH_NOT_FOUND */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
-                        case 0xC0000043uz /* STATUS_SHARING_VIOLATION */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::ebusy;
-                        case 0xC0000054uz /* STATUS_FILE_LOCK_CONFLICT */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eagain;
-                        case 0xC000007Fuz /* STATUS_DISK_FULL */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enospc;
-                        case 0xC0000010uz /* STATUS_INVALID_DEVICE_REQUEST */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enosys;
-                        case 0xC0000011uz /* STATUS_END_OF_FILE */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;  // write has no EOF concept
-                        case 0xC0000013uz /* STATUS_NO_MEDIA_IN_DEVICE */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
-                        case 0xC000000Euz /* STATUS_NO_SUCH_DEVICE */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
-                        case 0xC0000101uz /* STATUS_DIRECTORY_NOT_EMPTY */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotempty;
-                        case 0xC0000281uz /* STATUS_DIRECTORY_IS_A_REPARSE_POINT */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-                        case 0xC00000BAuz /* STATUS_FILE_IS_A_DIRECTORY */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
-                        case 0xC000009Auz /* STATUS_INSUFFICIENT_RESOURCES */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enomem;
-                        case 0xC0000017uz /* STATUS_NO_MEMORY */: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enomem;
-                        case 0xC0000120uz /*STATUS_CANCELLED*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::ecanceled;
-                        case 0x00000103uz /*STATUS_PENDING*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einprogress;
-                        case 0xC000014Buz /*STATUS_PIPE_BROKEN*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::epipe;
-                        case 0xC0000035uz /*STATUS_OBJECT_NAME_COLLISION*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eexist;
-                        case 0xC0000106uz /*STATUS_NAME_TOO_LONG*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enametoolong;
-                        default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-                    }
-
-                    break;
-                }
-#  endif
-                [[unlikely]] default:
-                {
-#  if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
-                    // Security issues inherent to virtual machines
-                    ::uwvm2::utils::debug::trap_and_inform_bug_pos();
-#  endif
-                    return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-                }
-            }
-# else
-            switch(e.code)
-            {
-                // If “ebadf” appears here, it is caused by a WASI implementation issue. This differs from WASI's ‘ebadf’; here, “eio” is used
-                // instead.
-                case EBADF: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-                case ENOSPC: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enospc;
-                case EFBIG: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::efbig;
-                case EINVAL: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
-                case EACCES: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eacces;
-                case EPERM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm;
-                case EISDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eisdir;
-                case EROFS: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::erofs;
-#  if defined(EDQUOT)
-                case EDQUOT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::edquot;
-#  endif
-                case EINTR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eintr;
-#  if defined(EWOULDBLOCK) && (!defined(EAGAIN) || (EAGAIN != EWOULDBLOCK))
-                case EWOULDBLOCK: [[fallthrough]];
-#  endif
-                case EAGAIN: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eagain;
-                case ESPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::espipe;
-#  if defined(EOPNOTSUPP) && (!defined(ENOTSUP) || (ENOTSUP != EOPNOTSUPP))
-                case EOPNOTSUPP: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
-#  endif
-#  if defined(ENOTSUP)
-                case ENOTSUP: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotsup;
-#  endif
-                case EFAULT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::efault;
-                case ENXIO: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enxio;
-                case ENODEV: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enodev;
-                case ENOENT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enoent;
-                case ENOTDIR: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotdir;
-                case EIO: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-                case ENOMEM: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enomem;
-                case EOVERFLOW: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eoverflow;
-#  if defined(ETIMEDOUT)
-                case ETIMEDOUT: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::etimedout;
-#  endif
-#  if defined(ECONNRESET)
-                case ECONNRESET: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::econnreset;
-#  endif
-#  if defined(EPIPE)
-                case EPIPE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::epipe;
-#  endif
-#  if defined(EEXIST)
-                case EEXIST: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eexist;
-#  endif
-#  if defined(ENAMETOOLONG)
-                case ENAMETOOLONG: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enametoolong;
-#  endif
-#  if defined(ELOOP)
-                case ELOOP: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eloop;
-#  endif
-#  if defined(EMLINK)
-                case EMLINK: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::emlink;
-#  endif
-                default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
-            }
-# endif
-        }
-#endif
 
         return ::uwvm2::imported::wasi::wasip1::abi::errno_t::esuccess;
     }
