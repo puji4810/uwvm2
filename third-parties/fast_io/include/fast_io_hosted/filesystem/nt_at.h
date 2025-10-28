@@ -267,7 +267,7 @@ inline posix_file_status nt_fstatat_impl(void *dirhd, char16_t const *path_c_str
 		.CreateDisposition = 0x00000001,      // OPEN_EXISTING => FILE_OPEN
 	};
 
-	if ((flags & nt_at_flags::symlink_nofollow) != nt_at_flags::symlink_nofollow)
+	if ((flags & nt_at_flags::symlink_nofollow) == nt_at_flags::symlink_nofollow)
 	{
 		md.CreateOptions |= 0x00200000; // FILE_FLAG_OPEN_REPARSE_POINT => FILE_OPEN_REPARSE_POINT (0x00200000)
 	}
@@ -772,7 +772,7 @@ inline ::fast_io::details::basic_ct_string<char_type> nt_readlinkat_impl(void *d
 #if !defined(_WIN32_WINNT) || _WIN32_WINNT > 0x0600
 	constexpr ::fast_io::win32::nt::details::nt_open_mode md{
 		.DesiredAccess = 0x00100000 | 0x0080, // SYNCHRONIZE | FILE_READ_ATTRIBUTES
-		.FileAttributes = 0x80,             b  // FILE_ATTRIBUTE_NORMAL
+		.FileAttributes = 0x80,               // FILE_ATTRIBUTE_NORMAL
 		.ShareAccess = 0x00000007,            // FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE
 		.CreateDisposition = 0x00000001,      // OPEN_EXISTING => FILE_OPEN
 		.CreateOptions = 0x00200000           // FILE_FLAG_OPEN_REPARSE_POINT => FILE_OPEN_REPARSE_POINT (0x00200000)
