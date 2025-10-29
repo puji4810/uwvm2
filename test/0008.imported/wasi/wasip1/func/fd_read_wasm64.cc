@@ -174,11 +174,11 @@ int main()
 #if defined(_WIN32) && !defined(__CYGWIN__)
         fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file = ::fast_io::native_file{
             u8"test_fd_read_wasm64_zero.tmp",
-            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat | ::fast_io::open_mode::no_block};
+            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat };
 #else
         fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd = ::fast_io::native_file{
             u8"test_fd_read_wasm64_zero.tmp",
-            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat | ::fast_io::open_mode::no_block};
+            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat };
 #endif
 
         constexpr wasi_void_ptr_wasm64_t iovs_ptr{128u};
@@ -209,12 +209,12 @@ int main()
 #if defined(_WIN32) && !defined(__CYGWIN__)
         fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file = ::fast_io::native_file{
             u8"test_fd_read_wasm64_rights.tmp",
-            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat | ::fast_io::open_mode::no_block};
+            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat };
         auto& file_fd = fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd.file;
 #else
         fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd = ::fast_io::native_file{
             u8"test_fd_read_wasm64_rights.tmp",
-            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat | ::fast_io::open_mode::no_block};
+            ::fast_io::open_mode::out | ::fast_io::open_mode::in | ::fast_io::open_mode::trunc | ::fast_io::open_mode::creat };
         auto& file_fd = fde.wasi_fd.ptr->wasi_fd_storage.storage.file_fd;
 #endif
         ::fast_io::io::print(file_fd, "data");
