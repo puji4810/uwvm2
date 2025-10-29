@@ -20,6 +20,7 @@
 
 #include <cstddef>
 #include <cstring>
+#include <string>
 
 #include <fast_io.h>
 
@@ -1058,6 +1059,227 @@ int main()
         {
         }
     }
+
+#if (defined(_WIN32) || defined(__CYGWIN__)) || (defined(__MSDOS__) || defined(__DJGPP__))
+    // Case 23: backslash in a component -> einval (pre-check rejects multi-level via \\)
+    {
+        constexpr wasi_void_ptr_wasm64_t p{55296u};
+        constexpr auto s = u8"pcd64_inv_bs_a\\b";
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(memory,
+                                                                            p,
+                                                                            reinterpret_cast<::std::byte const*>(s),
+                                                                            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd64_inv_bs_a\\b") - 1u);
+
+        auto const ret =
+            ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(env,
+                                                                                static_cast<wasi_posix_fd_wasm64_t>(3),
+                                                                                p,
+                                                                                static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_inv_bs_a\\b") - 1u));
+        if(ret != errno_wasm64_t::einval)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 23 expected einval");
+            ::fast_io::fast_terminate();
+        }
+    }
+
+    // Case 23b: sole backslash -> einval
+    {
+        constexpr wasi_void_ptr_wasm64_t p{56320u};
+        constexpr auto s = u8"\\";
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(memory,
+                                                                            p,
+                                                                            reinterpret_cast<::std::byte const*>(s),
+                                                                            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"\\") - 1u);
+
+        auto const ret = ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(env,
+                                                                                             static_cast<wasi_posix_fd_wasm64_t>(3),
+                                                                                             p,
+                                                                                             static_cast<wasi_size_wasm64_t>(sizeof(u8"\\") - 1u));
+        if(ret != errno_wasm64_t::einval)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 23b expected einval");
+            ::fast_io::fast_terminate();
+        }
+    }
+
+    // Case 24: '*' -> einval
+    {
+        constexpr wasi_void_ptr_wasm64_t p{57344u};
+        constexpr auto s = u8"pcd64_star_*";
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(memory,
+                                                                            p,
+                                                                            reinterpret_cast<::std::byte const*>(s),
+                                                                            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd64_star_*") - 1u);
+
+        auto const ret = ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(env,
+                                                                                             static_cast<wasi_posix_fd_wasm64_t>(3),
+                                                                                             p,
+                                                                                             static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_star_*") - 1u));
+        if(ret != errno_wasm64_t::einval)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 24 expected einval");
+            ::fast_io::fast_terminate();
+        }
+    }
+
+    // Case 25: '?' -> einval
+    {
+        constexpr wasi_void_ptr_wasm64_t p{59392u};
+        constexpr auto s = u8"pcd64_qmark_?";
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(memory,
+                                                                            p,
+                                                                            reinterpret_cast<::std::byte const*>(s),
+                                                                            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd64_qmark_?") - 1u);
+
+        auto const ret = ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(env,
+                                                                                             static_cast<wasi_posix_fd_wasm64_t>(3),
+                                                                                             p,
+                                                                                             static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_qmark_?") - 1u));
+        if(ret != errno_wasm64_t::einval)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 25 expected einval");
+            ::fast_io::fast_terminate();
+        }
+    }
+
+    // Case 26: '|' -> einval
+    {
+        constexpr wasi_void_ptr_wasm64_t p{61440u};
+        constexpr auto s = u8"pcd64_pipe_|";
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(memory,
+                                                                            p,
+                                                                            reinterpret_cast<::std::byte const*>(s),
+                                                                            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd64_pipe_|") - 1u);
+
+        auto const ret = ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(env,
+                                                                                             static_cast<wasi_posix_fd_wasm64_t>(3),
+                                                                                             p,
+                                                                                             static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_pipe_|") - 1u));
+        if(ret != errno_wasm64_t::einval)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 26 expected einval");
+            ::fast_io::fast_terminate();
+        }
+    }
+
+    // Case 27: '<' and '>' -> einval
+    {
+        constexpr wasi_void_ptr_wasm64_t p1{63488u};
+        constexpr auto s1 = u8"pcd64_lt_<";
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(memory,
+                                                                            p1,
+                                                                            reinterpret_cast<::std::byte const*>(s1),
+                                                                            reinterpret_cast<::std::byte const*>(s1) + sizeof(u8"pcd64_lt_<") - 1u);
+        auto const r1 = ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(env,
+                                                                                            static_cast<wasi_posix_fd_wasm64_t>(3),
+                                                                                            p1,
+                                                                                            static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_lt_<") - 1u));
+        if(r1 != errno_wasm64_t::einval)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 27a expected einval");
+            ::fast_io::fast_terminate();
+        }
+
+        constexpr wasi_void_ptr_wasm64_t p2{65536u};
+        constexpr auto s2 = u8"pcd64_gt_>";
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(memory,
+                                                                            p2,
+                                                                            reinterpret_cast<::std::byte const*>(s2),
+                                                                            reinterpret_cast<::std::byte const*>(s2) + sizeof(u8"pcd64_gt_>") - 1u);
+        auto const r2 = ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(env,
+                                                                                            static_cast<wasi_posix_fd_wasm64_t>(3),
+                                                                                            p2,
+                                                                                            static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_gt_>") - 1u));
+        if(r2 != errno_wasm64_t::einval)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 27b expected einval");
+            ::fast_io::fast_terminate();
+        }
+    }
+
+    // Case 28: '"' -> einval
+    {
+        constexpr wasi_void_ptr_wasm64_t p{67584u};
+        constexpr auto s = u8"pcd64_quote_\"";
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(memory,
+                                                                            p,
+                                                                            reinterpret_cast<::std::byte const*>(s),
+                                                                            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd64_quote_\"") - 1u);
+
+        auto const ret = ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(env,
+                                                                                             static_cast<wasi_posix_fd_wasm64_t>(3),
+                                                                                             p,
+                                                                                             static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_quote_\"") - 1u));
+        if(ret != errno_wasm64_t::einval)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 28 expected einval");
+            ::fast_io::fast_terminate();
+        }
+    }
+
+    // Case 29: colon in name -> einval
+    {
+        constexpr wasi_void_ptr_wasm64_t p{69632u};
+        constexpr auto s = u8"pcd64_colon_a:b";
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(memory,
+                                                                            p,
+                                                                            reinterpret_cast<::std::byte const*>(s),
+                                                                            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd64_colon_a:b") - 1u);
+
+        auto const ret = ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(env,
+                                                                                             static_cast<wasi_posix_fd_wasm64_t>(3),
+                                                                                             p,
+                                                                                             static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_colon_a:b") - 1u));
+        if(ret != errno_wasm64_t::einval)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 29 expected einval");
+            ::fast_io::fast_terminate();
+        }
+    }
+
+    // Case 30: drive-relative like 'C:foo' as a name -> einval
+    {
+        constexpr wasi_void_ptr_wasm64_t p{71680u};
+        constexpr auto s = u8"C:pcd64_drive_rel";
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(memory,
+                                                                            p,
+                                                                            reinterpret_cast<::std::byte const*>(s),
+                                                                            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"C:pcd64_drive_rel") - 1u);
+
+        auto const ret =
+            ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(env,
+                                                                                static_cast<wasi_posix_fd_wasm64_t>(3),
+                                                                                p,
+                                                                                static_cast<wasi_size_wasm64_t>(sizeof(u8"C:pcd64_drive_rel") - 1u));
+        if(ret != errno_wasm64_t::einval)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 30 expected einval");
+            ::fast_io::fast_terminate();
+        }
+    }
+
+    // Case 31: '\\'
+    {
+        constexpr wasi_void_ptr_wasm64_t p{71680u};
+        constexpr auto s = u8"pcd64_inv_bs_a\\b";
+        ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(memory,
+                                                                            p,
+                                                                            reinterpret_cast<::std::byte const*>(s),
+                                                                            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"C:pcd64_drive_rel") - 1u);
+
+        auto const ret =
+            ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(env,
+                                                                                static_cast<wasi_posix_fd_wasm64_t>(3),
+                                                                                p,
+                                                                                static_cast<wasi_size_wasm64_t>(sizeof(u8"C:pcd64_drive_rel") - 1u));
+        if(ret != errno_wasm64_t::einval)
+        {
+            ::fast_io::io::perrln("error: pcd64 Case 30 expected einval");
+            ::fast_io::fast_terminate();
+        }
+    }
+
+#endif
 
     return 0;
 }

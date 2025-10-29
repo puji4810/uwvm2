@@ -319,6 +319,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                                               case 183uz /*ERROR_ALREADY_EXISTS*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eexist;
                                                               case 206uz /*ERROR_FILENAME_EXCED_RANGE*/:
                                                                   return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enametoolong;
+                                                              case 123uz /*ERROR_INVALID_NAME*/: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
                                                               default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
                                                           }
 
@@ -390,6 +391,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                                                   return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enametoolong;
                                                               case 0xC0000103uz /*STATUS_NOT_A_DIRECTORY*/:
                                                                   return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotdir;
+                                                              case 0xC0000033uz /*STATUS_OBJECT_NAME_INVALID*/:
+                                                                  return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
                                                               default: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eio;
                                                           }
 
@@ -494,11 +497,31 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eilseq;
         }
 
-        auto const split_path_res{::uwvm2::imported::wasi::wasip1::func::split_path(::uwvm2::utils::container::u8string_view{path.data(), path.size()})};
+        auto const split_path_res{::uwvm2::imported::wasi::wasip1::func::split_posix_path(::uwvm2::utils::container::u8string_view{path.data(), path.size()})};
 
         // The path series functions in wasip1 reject absolute paths.
         if(split_path_res.is_absolute) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm; }
         if(split_path_res.res.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval; }
+
+#if (defined(_WIN32) || defined(__CYGWIN__)) || (defined(__MSDOS__) || defined(__DJGPP__))
+        // For the Windows API, the parsing strategy differs from POSIX. Windows supports the backslash as a delimiter while rejecting many characters.
+        // This only eliminates the possibility of multi-level paths; the remaining issue of invalid filenames is handled by the API.
+        for(auto const& split_curr: split_path_res.res)
+        {
+            if(split_curr.dir_type == ::uwvm2::imported::wasi::wasip1::func::dir_type_e::next)
+            {
+                auto const& next_name{split_curr.next_name};
+                for(auto const curr_char: next_name)
+                {
+                    // Simultaneously eliminate errors at both the path syntax layer and the file system syntax layer.
+                    if(::fast_io::char_category::is_dos_file_invalid_character(curr_char)) [[unlikely]]
+                    {
+                        return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
+                    }
+                }
+            }
+        }
+#endif
 
         ::uwvm2::utils::container::vector<::fast_io::dir_file> path_stack{};
         path_stack.reserve(split_path_res.res.size());
@@ -627,9 +650,30 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                     return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eilseq;
                                 }
 
-                                auto const split_path_res{::uwvm2::imported::wasi::wasip1::func::split_path(symlink_symbol)};
+                                auto const split_path_res{::uwvm2::imported::wasi::wasip1::func::split_posix_path(symlink_symbol)};
 
                                 if(split_path_res.is_absolute) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eperm; }
+
+#if (defined(_WIN32) || defined(__CYGWIN__)) || (defined(__MSDOS__) || defined(__DJGPP__))
+                                // For the Windows API, the parsing strategy differs from POSIX. Windows supports the backslash as a delimiter while rejecting
+                                // many characters.
+                                // This only eliminates the possibility of multi-level paths; the remaining issue of invalid filenames is handled by the API.
+                                for(auto const& split_curr: split_path_res.res)
+                                {
+                                    if(split_curr.dir_type == ::uwvm2::imported::wasi::wasip1::func::dir_type_e::next)
+                                    {
+                                        auto const& next_name{split_curr.next_name};
+                                        for(auto const curr_char: next_name)
+                                        {
+                                            // Simultaneously eliminate errors at both the path syntax layer and the file system syntax layer.
+                                            if(::fast_io::char_category::is_dos_file_invalid_character(curr_char)) [[unlikely]]
+                                            {
+                                                return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval;
+                                            }
+                                        }
+                                    }
+                                }
+#endif
 
                                 for(auto const& split_curr: split_path_res.res)
                                 {

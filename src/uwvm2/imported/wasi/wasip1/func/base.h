@@ -206,7 +206,9 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         bool is_absolute{};
     };
 
-    inline constexpr split_path_res_t split_path(::uwvm2::utils::container::u8string_view path) noexcept
+    /// @note This function is not compatible with Windows, as Windows uses both forward slashes and backslashes as path separators. If you are using Windows,
+    /// you must add a backslash check for each subsequent level to prevent multi-level paths from occurring.
+    inline constexpr split_path_res_t split_posix_path(::uwvm2::utils::container::u8string_view path) noexcept
     {
         split_path_res_t result{};
 
