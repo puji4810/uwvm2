@@ -319,7 +319,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                                               case 997uz /*ERROR_IO_PENDING*/:
                                                                   return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einprogress;
                                                               case 267uz /*ERROR_DIRECTORY*/:
-                                                                  return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eisdir;
+                                                                  return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotdir;
                                                               case 183uz /*ERROR_ALREADY_EXISTS*/:
                                                                   return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eexist;
                                                               case 206uz /*ERROR_FILENAME_EXCED_RANGE*/:
@@ -393,6 +393,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                                                   return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eexist;
                                                               case 0xC0000106uz /*STATUS_NAME_TOO_LONG*/:
                                                                   return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enametoolong;
+                                                              case 0xC0000103uz /*STATUS_NOT_A_DIRECTORY*/:
+                                                                  return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::enotdir;
                                                               default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eio;
                                                           }
 

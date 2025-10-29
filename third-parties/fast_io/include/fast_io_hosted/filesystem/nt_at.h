@@ -95,7 +95,7 @@ inline void nt_mkdirat_impl(void *dirhd, char16_t const *path_c_str, ::std::size
 {
 	constexpr fast_io::win32::nt::details::nt_open_mode create_dir_mode{
 		fast_io::win32::nt::details::calculate_nt_open_mode(
-			{fast_io::open_mode::creat | fast_io::open_mode::directory})};
+			{fast_io::open_mode::creat | ::fast_io::open_mode::excl | fast_io::open_mode::directory})};
 	auto m_dir_mode{create_dir_mode};
 	if ((pm & perms::owner_write) == perms::none)
 	{
