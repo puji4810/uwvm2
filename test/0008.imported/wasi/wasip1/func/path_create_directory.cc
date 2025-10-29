@@ -938,7 +938,8 @@ int main()
         }
     }
 
-    // Case 21: permission boundary on parent dir -> eacces/eperm
+    // Case 21: permission boundary on parent dir -> eacces/eperm (only posix)
+#if !defined(_WIN32)
     {
         try
         {
@@ -949,6 +950,7 @@ int main()
         }
         try
         {
+            // The Win32 chmod model differs from POSIX.
             ::fast_io::native_fchmodat(::fast_io::at_fdcwd(), u8"pcd32_ro_a", static_cast<::fast_io::perms>(0555));
         }
         catch(::fast_io::error)
@@ -988,7 +990,7 @@ int main()
         {
         }
     }
-
+#endif
     // Case 22: symlink to a file as intermediate -> enotdir
     {
         try

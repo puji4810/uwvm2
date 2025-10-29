@@ -218,7 +218,7 @@ int main()
         // cleanup (ignore failures)
         try
         {
-            ::fast_io::native_unlinkat(::fast_io::at_fdcwd(), u8"uwvm_ut_pcd32_ok", ::fast_io::native_at_flags::removedir);
+            ::fast_io::native_unlinkat(::fast_io::at_fdcwd(), u8"uwvm_ut_pcd64_ok", ::fast_io::native_at_flags::removedir);
         }
         catch(::fast_io::error)
         {
@@ -955,6 +955,7 @@ int main()
     }
 
     // Case 21: permission boundary on parent dir -> eacces/eperm
+#if !defined(_WIN32)
     {
         try
         {
@@ -1004,6 +1005,7 @@ int main()
         {
         }
     }
+#endif
 
     // Case 22: symlink to a file as intermediate -> enotdir
     {

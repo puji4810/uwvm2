@@ -101,7 +101,7 @@ inline void nt_mkdirat_impl(void *dirhd, char16_t const *path_c_str, ::std::size
 		.CreateOptions = 0x00004021           // FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT | FILE_OPEN_FOR_BACKUP_INTENT
 	};
 
-	if ((pm & perms::owner_write) != perms::owner_write)
+	if ((pm & perms::owner_write) == perms::none)
 	{
 		m_dir_mode.FileAttributes |= 0x00000001; // FILE_ATTRIBUTE_READONLY
 	}
