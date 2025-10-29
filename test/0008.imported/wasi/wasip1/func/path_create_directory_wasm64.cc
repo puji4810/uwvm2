@@ -1291,16 +1291,16 @@ int main()
         ::uwvm2::imported::wasi::wasip1::memory::write_all_to_memory_wasm64(memory,
                                                                             p,
                                                                             reinterpret_cast<::std::byte const*>(s),
-                                                                            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"C:pcd64_drive_rel") - 1u);
+                                                                            reinterpret_cast<::std::byte const*>(s) + sizeof(u8"pcd64_inv_bs_a\\b") - 1u);
 
         auto const ret =
             ::uwvm2::imported::wasi::wasip1::func::path_create_directory_wasm64(env,
                                                                                 static_cast<wasi_posix_fd_wasm64_t>(3),
                                                                                 p,
-                                                                                static_cast<wasi_size_wasm64_t>(sizeof(u8"C:pcd64_drive_rel") - 1u));
+                                                                                static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_inv_bs_a\\b") - 1u));
         if(ret != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 30 expected einval");
+            ::fast_io::io::perrln("error: pcd64 Case 31 expected einval");
             ::fast_io::fast_terminate();
         }
     }
