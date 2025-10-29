@@ -355,7 +355,13 @@ int main()
                                                                                       static_cast<wasi_posix_fd_t>(3),
                                                                                       p,
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_dot3_a/f/.") - 1u));
-        if(ret != errno_t::enotdir)
+        if(ret !=
+#if defined(_WIN32) && defined(_WIN32_WINDOWS)
+           errno_t::enoent
+#else
+           errno_t::enotdir
+#endif
+        )
         {
             ::fast_io::io::perrln("error: pcd32 Case 9 expected enotdir");
             ::fast_io::fast_terminate();
@@ -506,7 +512,13 @@ int main()
                                                                                       static_cast<wasi_posix_fd_t>(3),
                                                                                       p,
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_pp3_a/b/../c") - 1u));
-        if(ret != errno_t::enotdir)
+        if(ret !=
+#if defined(_WIN32) && defined(_WIN32_WINDOWS)
+           errno_t::enoent
+#else
+           errno_t::enotdir
+#endif
+        )
         {
             ::fast_io::io::perrln("error: pcd32 Case 12 expected enotdir");
             ::fast_io::fast_terminate();
@@ -593,6 +605,7 @@ int main()
         }
     }
 
+#if !(defined(_WIN32_WINDOWS) || _WIN32_WINNT <= 0x600 || defined(__MSDOS__) || defined(__DJGPP__))
     // Case 14: symlink intermediate -> create under target directory
     {
         try
@@ -660,7 +673,9 @@ int main()
         {
         }
     }
+#endif
 
+#if !(defined(_WIN32_WINDOWS) || _WIN32_WINNT <= 0x600 || defined(__MSDOS__) || defined(__DJGPP__))
     // Case 15: symlink loop -> eloop
     {
         try
@@ -696,7 +711,9 @@ int main()
         {
         }
     }
+#endif
 
+#if !(defined(_WIN32_WINDOWS) || _WIN32_WINNT <= 0x600 || defined(__MSDOS__) || defined(__DJGPP__))
     // Case 16: symlink escapes root -> eperm
     {
         try
@@ -732,6 +749,7 @@ int main()
         {
         }
     }
+#endif
 
     // Case 17: creating existing directory without trailing '.' -> eexist
     {
@@ -783,6 +801,7 @@ int main()
         }
     }
 
+#if !(defined(_WIN32_WINDOWS) || _WIN32_WINNT <= 0x600 || defined(__MSDOS__) || defined(__DJGPP__))
     // Case 18: symlink to absolute path (e.g., /etc) -> eperm
     {
         try
@@ -818,7 +837,9 @@ int main()
         {
         }
     }
+#endif
 
+#if !(defined(_WIN32_WINDOWS) || _WIN32_WINNT <= 0x600 || defined(__MSDOS__) || defined(__DJGPP__))
     // Case 19: two-node symlink loop A<->B -> eloop
     {
         try
@@ -862,7 +883,9 @@ int main()
         {
         }
     }
+#endif
 
+#if !(defined(_WIN32_WINDOWS) || _WIN32_WINNT <= 0x600 || defined(__MSDOS__) || defined(__DJGPP__))
     // Case 20: symlink to ".." inside subdir -> esuccess (pcd32_escape_a/up/x -> x)
     {
         try
@@ -938,6 +961,7 @@ int main()
         {
         }
     }
+#endif
 
     // Case 21: permission boundary on parent dir -> eacces/eperm (only posix)
 #if !defined(_WIN32)
@@ -992,6 +1016,7 @@ int main()
         }
     }
 #endif
+#if !(defined(_WIN32_WINDOWS) || _WIN32_WINNT <= 0x600 || defined(__MSDOS__) || defined(__DJGPP__))
     // Case 22: symlink to a file as intermediate -> enotdir
     {
         try
@@ -1042,6 +1067,7 @@ int main()
         {
         }
     }
+#endif
 
 #if (defined(_WIN32) || defined(__CYGWIN__)) || (defined(__MSDOS__) || defined(__DJGPP__))
     // Case 23: backslash in a component -> einval (pre-check rejects multi-level via \\)
