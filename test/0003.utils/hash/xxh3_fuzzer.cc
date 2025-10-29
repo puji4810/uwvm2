@@ -7598,11 +7598,45 @@ inline void run_fuzzer_tests(::std::size_t num_tests) noexcept
     }
 }
 
+// Additional fixed-length fuzzer: tests lengths in [min_len, max_len] with multiple variants per length
+inline void run_fuzzer_tests_fixed_range(::std::size_t min_len, ::std::size_t max_len, ::std::size_t variants_per_len) noexcept
+{
+    for(::std::size_t len{min_len}; len <= max_len; ++len)
+    {
+        for(::std::size_t v{}; v < variants_per_len; ++v)
+        {
+            auto data_vec = generate_random_data(len);
+
+            // For zero-length inputs, pass nullptr for clarity; otherwise pass the data pointer
+            char const* ref_ptr{ len ? reinterpret_cast<char const*>(data_vec.data()) : nullptr };
+            auto const xxh3_default{ XXH3_64bits(ref_ptr, len) };
+
+            ::std::byte const* my_ptr{ len ? reinterpret_cast<::std::byte const*>(data_vec.data()) : nullptr };
+            auto const xxh3_my{ ::uwvm2::utils::hash::details::xxh3_64bits_internal(
+                my_ptr,
+                len,
+                0u,
+                (::std::byte const*)XXH3_kSecret,
+                sizeof(XXH3_kSecret)) };
+
+            if (xxh3_default != xxh3_my) [[unlikely]]
+            {
+                ::fast_io::io::perr("Fixed-len test failed (len=", len, ", var#", v, "):\n");
+                ::fast_io::io::perr("  Input: ");
+                for(auto b: data_vec) { ::fast_io::io::perr(fast_io::mnp::hexupper<false, true>(b), " "); }
+                ::fast_io::fast_terminate();
+            }
+        }
+    }
+}
+
 int main()
 {
     constexpr size_t NUM_TESTS = 100'000;
     ::fast_io::io::perr("Running ", NUM_TESTS, " random xxh3 hash fuzzer tests...\n");
     run_fuzzer_tests(NUM_TESTS);
+    ::fast_io::io::perr("Running fixed-length xxh3 tests: [0,512] bytes, 1000 variants each...\n");
+    run_fuzzer_tests_fixed_range(0uz, 512uz, 1000uz);
 
     ::fast_io::io::perr("All tests passed successfully!\n");
     return 0;
