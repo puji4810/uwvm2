@@ -66,43 +66,11 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
     /// @details   __wasi_errno_t fd_renumber(__wasi_fd_t fd_from, __wasi_fd_t fd_to);
     /// @note      Renumber a file descriptor.
 
-    ::uwvm2::imported::wasi::wasip1::abi::errno_t fd_renumber(
+    inline ::uwvm2::imported::wasi::wasip1::abi::errno_t fd_renumber_base(
         ::uwvm2::imported::wasi::wasip1::environment::wasip1_environment<::uwvm2::object::memory::linear::native_memory_t> & env,
         ::uwvm2::imported::wasi::wasip1::abi::wasi_posix_fd_t fd_from,
         ::uwvm2::imported::wasi::wasip1::abi::wasi_posix_fd_t fd_to) noexcept
     {
-        auto const trace_wasip1_call{env.trace_wasip1_call};
-
-        if(trace_wasip1_call) [[unlikely]]
-        {
-#ifdef UWVM
-            ::fast_io::io::perr(::uwvm2::uwvm::io::u8log_output,
-                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL_AND_SET_WHITE),
-                                u8"uwvm: ",
-                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_LT_GREEN),
-                                u8"[info]  ",
-                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
-                                u8"wasip1: ",
-                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_YELLOW),
-                                u8"fd_renumber",
-                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
-                                u8"(",
-                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_LT_GREEN),
-                                fd_from,
-                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
-                                u8", ",
-                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_LT_GREEN),
-                                fd_to,
-                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
-                                u8") ",
-                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_ORANGE),
-                                u8"(wasi-trace)\n",
-                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL));
-#else
-            ::fast_io::io::perr(::fast_io::u8err(), u8"uwvm: [info]  wasip1: fd_renumber(", fd_from, u8", ", fd_to, u8") (wasi-trace)\n");
-#endif
-        }
-
         // The negative value fd is invalid, and this check prevents subsequent undefined behavior.
         if(fd_from < 0 || fd_to < 0) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::ebadf; }
 
@@ -303,6 +271,46 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         if(displaced_fd_p) { ::uwvm2::imported::wasi::wasip1::fd_manager::destroy_wasi_fd(displaced_fd_p); }
 
         return ::uwvm2::imported::wasi::wasip1::abi::errno_t::esuccess;
+    }
+
+    inline ::uwvm2::imported::wasi::wasip1::abi::errno_t fd_renumber(
+        ::uwvm2::imported::wasi::wasip1::environment::wasip1_environment<::uwvm2::object::memory::linear::native_memory_t> & env,
+        ::uwvm2::imported::wasi::wasip1::abi::wasi_posix_fd_t fd_from,
+        ::uwvm2::imported::wasi::wasip1::abi::wasi_posix_fd_t fd_to) noexcept
+    {
+        auto const trace_wasip1_call{env.trace_wasip1_call};
+
+        if(trace_wasip1_call) [[unlikely]]
+        {
+#ifdef UWVM
+            ::fast_io::io::perr(::uwvm2::uwvm::io::u8log_output,
+                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL_AND_SET_WHITE),
+                                u8"uwvm: ",
+                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_LT_GREEN),
+                                u8"[info]  ",
+                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
+                                u8"wasip1: ",
+                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_YELLOW),
+                                u8"fd_renumber",
+                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
+                                u8"(",
+                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_LT_GREEN),
+                                fd_from,
+                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
+                                u8", ",
+                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_LT_GREEN),
+                                fd_to,
+                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_WHITE),
+                                u8") ",
+                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_ORANGE),
+                                u8"(wasi-trace)\n",
+                                ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL));
+#else
+            ::fast_io::io::perr(::fast_io::u8err(), u8"uwvm: [info]  wasip1: fd_renumber(", fd_from, u8", ", fd_to, u8") (wasi-trace)\n");
+#endif
+        }
+
+        return fd_renumber_base(env, fd_from, fd_to);
     }
 }  // namespace uwvm2::imported::wasi::wasip1::func
 

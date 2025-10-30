@@ -313,6 +313,36 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::abi
         lookup_symlink_follow = 0x00000001
     };
 
+    inline constexpr lookupflags_t operator& (lookupflags_t x, lookupflags_t y) noexcept
+    {
+        using utype = typename ::std::underlying_type<lookupflags_t>::type;
+        return static_cast<lookupflags_t>(static_cast<utype>(x) & static_cast<utype>(y));
+    }
+
+    inline constexpr lookupflags_t operator| (lookupflags_t x, lookupflags_t y) noexcept
+    {
+        using utype = typename ::std::underlying_type<lookupflags_t>::type;
+        return static_cast<lookupflags_t>(static_cast<utype>(x) | static_cast<utype>(y));
+    }
+
+    inline constexpr lookupflags_t operator^ (lookupflags_t x, lookupflags_t y) noexcept
+    {
+        using utype = typename ::std::underlying_type<lookupflags_t>::type;
+        return static_cast<lookupflags_t>(static_cast<utype>(x) ^ static_cast<utype>(y));
+    }
+
+    inline constexpr lookupflags_t operator~(lookupflags_t x) noexcept
+    {
+        using utype = typename ::std::underlying_type<lookupflags_t>::type;
+        return static_cast<lookupflags_t>(~static_cast<utype>(x));
+    }
+
+    inline constexpr lookupflags_t& operator&= (lookupflags_t& x, lookupflags_t y) noexcept { return x = x & y; }
+
+    inline constexpr lookupflags_t& operator|= (lookupflags_t& x, lookupflags_t y) noexcept { return x = x | y; }
+
+    inline constexpr lookupflags_t& operator^= (lookupflags_t& x, lookupflags_t y) noexcept { return x = x ^ y; }
+
     enum class oflags_t : ::uwvm2::parser::wasm::standard::wasm1::type::wasm_u16
     {
         o_creat = 0x0001,

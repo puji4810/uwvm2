@@ -49,6 +49,7 @@ import uwvm2.imported.wasi.wasip1.memory;
 import uwvm2.imported.wasi.wasip1.environment;
 import :base;
 import :posix;
+import :fd_fdstat_set_rights;
 
 #ifndef UWVM_MODULE
 # define UWVM_MODULE
