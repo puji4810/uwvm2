@@ -29,7 +29,9 @@
 # include <climits>
 # include <concepts>
 # include <bit>
+#if __has_include(<stdfloat>)
 # include <stdfloat>
+#endif
 # include <limits>
 // macro
 # include <uwvm2/parser/wasm/feature/feature_push_macro.h>
