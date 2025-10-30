@@ -365,13 +365,7 @@ int main()
                                                                                 static_cast<wasi_posix_fd_wasm64_t>(3),
                                                                                 p,
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_dot3_a/f/.") - 1u));
-        if(ret !=
-#if defined(_WIN32) && defined(_WIN32_WINDOWS)
-           errno_wasm64_t::enoent
-#else
-           errno_wasm64_t::enotdir
-#endif
-        )
+        if(ret != errno_wasm64_t::enotdir)
         {
             ::fast_io::io::perrln("error: pcd64 Case 9 expected enotdir");
             ::fast_io::fast_terminate();
@@ -525,13 +519,7 @@ int main()
                                                                                 static_cast<wasi_posix_fd_wasm64_t>(3),
                                                                                 p,
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_pp3_a/b/../c") - 1u));
-        if(ret !=
-#if defined(_WIN32) && defined(_WIN32_WINDOWS)
-           errno_wasm64_t::enoent
-#else
-           errno_wasm64_t::enotdir
-#endif
-        )
+        if(ret != errno_wasm64_t::enotdir)
         {
             ::fast_io::io::perrln("error: pcd64 Case 12 expected enotdir");
             ::fast_io::fast_terminate();
@@ -980,7 +968,7 @@ int main()
 #endif
 
     // Case 21: permission boundary on parent dir -> eacces/eperm
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !(defined(__MSDOS__) || defined(__DJGPP__))
     {
         try
         {

@@ -456,6 +456,9 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 # if defined(EEXIST)
                                                       case EEXIST: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eexist;
 # endif
+# if defined(EMFILE)
+                                                      case EMFILE: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::emfile;
+# endif
 # if defined(ENAMETOOLONG)
                                                       case ENAMETOOLONG: return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enametoolong;
 # endif
@@ -473,6 +476,11 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         // check path (Copy from WASM memory for use)
         ::uwvm2::utils::container::u8string path{};
 
+        if constexpr(::std::numeric_limits<::uwvm2::imported::wasi::wasip1::abi::wasi_size_t>::max() > ::std::numeric_limits<::std::size_t>::max())
+        {
+            if(path_len > ::std::numeric_limits<::std::size_t>::max()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::eoverflow; }
+        }
+
         {
             // Full locking is required during reading.
             [[maybe_unused]] auto const memory_locker_guard{::uwvm2::imported::wasi::wasip1::memory::lock_memory(memory)};
@@ -483,7 +491,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 
             auto const path_begin{memory.memory_begin + path_ptrsz};
 
-            path.assign(::uwvm2::utils::container::u8string_view{reinterpret_cast<char8_t_const_may_alias_ptr>(path_begin), path_len});
+            path.assign(
+                ::uwvm2::utils::container::u8string_view{reinterpret_cast<char8_t_const_may_alias_ptr>(path_begin), static_cast<::std::size_t>(path_len)});
         }
 
         if(path.empty()) [[unlikely]] { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::einval; }
@@ -734,10 +743,42 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                                     {
                                                         // default is symlink_nofollow
                                                         next = ::fast_io::dir_file{at(curr_fd_native_file), next_name};
+
+                                                    // The `Win32 CreateFileW` function can simultaneously open both a directory and a file when specifying a
+                                                    // directory. However, under the current fast_io strategy, `dir_file` does not utilize `CreateFileW`.
+                                                    // Instead, it employs `NTCreateFile` on NT systems and `FindNextFile` on Win9x systems.
+
+#if defined(__MSDOS__) || defined(__DJGPP__)
+                                                        // djgpp's `open` function does not distinguish between directories and files; manual differentiation is
+                                                        // required.
+                                                        ::fast_io::details::check_dos_fd_is_dir(next.fd);
+#endif
                                                     }
 #ifdef UWVM_CPP_EXCEPTIONS
                                                     catch(::fast_io::error e)
                                                     {
+                                                    // Windows 9x can only distinguish between a directory and other items (files or nothing at all).
+
+# if defined(_WIN32) && defined(_WIN32_WINDOWS)
+                                                        if(e.code == 2uz /*ERROR_FILE_NOT_FOUND*/) [[unlikely]]
+                                                        {
+                                                            bool is_file{};
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                                            try
+#  endif
+                                                            {
+                                                                ::fast_io::native_file{at(curr_fd_native_file), next_name, ::fast_io::open_mode::in};
+                                                                is_file = true;
+                                                            }
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                                            catch(::fast_io::error e)
+                                                            {
+                                                            }
+#  endif
+                                                            if(is_file) { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotdir; }
+                                                        }
+# endif
+
                                                         return fast_io_error_to_erron(e);
                                                     }
 #endif
@@ -779,10 +820,44 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                                     {
                                                         // default is symlink_nofollow
                                                         next = ::fast_io::dir_file{at(curr_path_stack.back_unchecked()), next_name};
+
+                                                    // The `Win32 CreateFileW` function can simultaneously open both a directory and a file when specifying a
+                                                    // directory. However, under the current fast_io strategy, `dir_file` does not utilize `CreateFileW`.
+                                                    // Instead, it employs `NTCreateFile` on NT systems and `FindNextFile` on Win9x systems.
+
+#if defined(__MSDOS__) || defined(__DJGPP__)
+                                                        // djgpp's `open` function does not distinguish between directories and files; manual differentiation is
+                                                        // required.
+                                                        ::fast_io::details::check_dos_fd_is_dir(next.fd);
+#endif
                                                     }
 #ifdef UWVM_CPP_EXCEPTIONS
                                                     catch(::fast_io::error e)
                                                     {
+                                                    // Windows 9x can only distinguish between a directory and other items (files or nothing at all).
+
+# if defined(_WIN32) && defined(_WIN32_WINDOWS)
+                                                        if(e.code == 2uz /*ERROR_FILE_NOT_FOUND*/) [[unlikely]]
+                                                        {
+                                                            bool is_file{};
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                                            try
+#  endif
+                                                            {
+                                                                ::fast_io::native_file{at(curr_path_stack.back_unchecked()),
+                                                                                       next_name,
+                                                                                       ::fast_io::open_mode::in};
+                                                                is_file = true;
+                                                            }
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                                            catch(::fast_io::error e)
+                                                            {
+                                                            }
+#  endif
+                                                            if(is_file) { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotdir; }
+                                                        }
+# endif
+
                                                         return fast_io_error_to_erron(e);
                                                     }
 #endif
@@ -844,10 +919,42 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                 {
                                     // default is symlink_nofollow
                                     next = ::fast_io::dir_file{at(curr_fd_native_file), next_name};
+
+                                    // The `Win32 CreateFileW` function can simultaneously open both a directory and a file when specifying a
+                                    // directory. However, under the current fast_io strategy, `dir_file` does not utilize `CreateFileW`.
+                                    // Instead, it employs `NTCreateFile` on NT systems and `FindNextFile` on Win9x systems.
+
+#if defined(__MSDOS__) || defined(__DJGPP__)
+                                    // djgpp's `open` function does not distinguish between directories and files; manual differentiation is
+                                    // required.
+                                    ::fast_io::details::check_dos_fd_is_dir(next.fd);
+#endif
                                 }
 #ifdef UWVM_CPP_EXCEPTIONS
                                 catch(::fast_io::error e)
                                 {
+                                    // Windows 9x can only distinguish between a directory and other items (files or nothing at all).
+
+# if defined(_WIN32) && defined(_WIN32_WINDOWS)
+                                    if(e.code == 2uz /*ERROR_FILE_NOT_FOUND*/) [[unlikely]]
+                                    {
+                                        bool is_file{};
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                        try
+#  endif
+                                        {
+                                            ::fast_io::native_file{at(curr_fd_native_file), next_name, ::fast_io::open_mode::in};
+                                            is_file = true;
+                                        }
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                        catch(::fast_io::error e)
+                                        {
+                                        }
+#  endif
+                                        if(is_file) { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotdir; }
+                                    }
+# endif
+
                                     return fast_io_error_to_erron(e);
                                 }
 #endif
@@ -888,10 +995,42 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                 {
                                     // default is symlink_nofollow
                                     next = ::fast_io::dir_file{at(path_stack.back_unchecked()), next_name};
+
+                                    // The `Win32 CreateFileW` function can simultaneously open both a directory and a file when specifying a
+                                    // directory. However, under the current fast_io strategy, `dir_file` does not utilize `CreateFileW`.
+                                    // Instead, it employs `NTCreateFile` on NT systems and `FindNextFile` on Win9x systems.
+
+#if defined(__MSDOS__) || defined(__DJGPP__)
+                                    // djgpp's `open` function does not distinguish between directories and files; manual differentiation is
+                                    // required.
+                                    ::fast_io::details::check_dos_fd_is_dir(next.fd);
+#endif
                                 }
 #ifdef UWVM_CPP_EXCEPTIONS
                                 catch(::fast_io::error e)
                                 {
+                                    // Windows 9x can only distinguish between a directory and other items (files or nothing at all).
+
+# if defined(_WIN32) && defined(_WIN32_WINDOWS)
+                                    if(e.code == 2uz /*ERROR_FILE_NOT_FOUND*/) [[unlikely]]
+                                    {
+                                        bool is_file{};
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                        try
+#  endif
+                                        {
+                                            ::fast_io::native_file{at(path_stack.back_unchecked()), next_name, ::fast_io::open_mode::in};
+                                            is_file = true;
+                                        }
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                        catch(::fast_io::error e)
+                                        {
+                                        }
+#  endif
+                                        if(is_file) { return ::uwvm2::imported::wasi::wasip1::abi::errno_t::enotdir; }
+                                    }
+# endif
+
                                     return fast_io_error_to_erron(e);
                                 }
 #endif
