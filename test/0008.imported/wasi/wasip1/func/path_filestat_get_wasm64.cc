@@ -346,13 +346,17 @@ int main()
             ::fast_io::io::perrln("error: pfg64 Case 10 expected esuccess + symbolic_link");
             ::fast_io::fast_terminate();
         }
-        // verify size equals link string length "pfg64_tA"
-        auto const sz = read_size(memory, stat_ptr);
-        if(static_cast<::std::uint_least64_t>(sz) != static_cast<::std::uint_least64_t>(sizeof(u8"pfg64_tA") - 1u))
+        // verify size equals link string length on POSIX platforms
+# ifndef _WIN32
         {
-            ::fast_io::io::perrln("error: pfg64 Case 10 symlink size mismatch");
-            ::fast_io::fast_terminate();
+            auto const sz = read_size(memory, stat_ptr);
+            if(static_cast<::std::uint_least64_t>(sz) != static_cast<::std::uint_least64_t>(sizeof(u8"pfg64_tA") - 1u))
+            {
+                ::fast_io::io::perrln("error: pfg64 Case 10 symlink size mismatch");
+                ::fast_io::fast_terminate();
+            }
         }
+# endif
         try
         {
             ::fast_io::native_unlinkat(::fast_io::at_fdcwd(), u8"pfg64_lA", {});
