@@ -496,7 +496,33 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 #ifdef UWVM_CPP_EXCEPTIONS
                                     catch(::fast_io::error e)
                                     {
+# if defined(_WIN32) && defined(_WIN32_WINDOWS)
+                                        // Windows 9x distinguishes between directory and file operations while attempting directory operations.
+                                        if(e.code == 5uz /*ERROR_ACCESS_DENIED*/)
+                                        {
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                            try
+#  endif
+                                            {
+                                                // default is nofollow
+                                                ::fast_io::dir_file tmp_dir_file{at(curr_fd_native_file), open_file_name};
+                                                open_file_status = ::fast_io::status(tmp_dir_file);
+                                            }
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                            catch(::fast_io::error)
+                                            {
+                                                // Use external error
+                                                return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+                                            }
+#  endif
+                                        }
+                                        else
+                                        {
+                                            return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+                                        }
+# else
                                         return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+# endif
                                     }
 #endif
                                 }
@@ -529,7 +555,33 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 #ifdef UWVM_CPP_EXCEPTIONS
                                         catch(::fast_io::error e)
                                         {
+# if defined(_WIN32) && defined(_WIN32_WINDOWS)
+                                            // Windows 9x distinguishes between directory and file operations while attempting directory operations.
+                                            if(e.code == 5uz /*ERROR_ACCESS_DENIED*/)
+                                            {
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                                try
+#  endif
+                                                {
+                                                    // default is nofollow
+                                                    ::fast_io::dir_file tmp_dir_file{at(curr_fd_native_file), open_file_name};
+                                                    open_file_status = ::fast_io::status(tmp_dir_file);
+                                                }
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                                catch(::fast_io::error)
+                                                {
+                                                    // Use external error
+                                                    return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+                                                }
+#  endif
+                                            }
+                                            else
+                                            {
+                                                return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+                                            }
+# else
                                             return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+# endif
                                         }
 #endif
                                     }
@@ -546,7 +598,33 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 #ifdef UWVM_CPP_EXCEPTIONS
                                         catch(::fast_io::error e)
                                         {
+# if defined(_WIN32) && defined(_WIN32_WINDOWS)
+                                            // Windows 9x distinguishes between directory and file operations while attempting directory operations.
+                                            if(e.code == 5uz /*ERROR_ACCESS_DENIED*/)
+                                            {
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                                try
+#  endif
+                                                {
+                                                    // default is nofollow
+                                                    ::fast_io::dir_file tmp_dir_file{at(path_stack.back_unchecked()), open_file_name};
+                                                    open_file_status = ::fast_io::status(tmp_dir_file);
+                                                }
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                                catch(::fast_io::error)
+                                                {
+                                                    // Use external error
+                                                    return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+                                                }
+#  endif
+                                            }
+                                            else
+                                            {
+                                                return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+                                            }
+# else
                                             return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+# endif
                                         }
 #endif
                                     }
@@ -570,7 +648,33 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 #ifdef UWVM_CPP_EXCEPTIONS
                                 catch(::fast_io::error e)
                                 {
+# if defined(_WIN32) && defined(_WIN32_WINDOWS)
+                                    // Windows 9x distinguishes between directory and file operations while attempting directory operations.
+                                    if(e.code == 5uz /*ERROR_ACCESS_DENIED*/)
+                                    {
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                        try
+#  endif
+                                        {
+                                            // default is nofollow
+                                            ::fast_io::dir_file tmp_dir_file{at(curr_fd_native_file), open_file_name};
+                                            open_file_status = ::fast_io::status(tmp_dir_file);
+                                        }
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                        catch(::fast_io::error)
+                                        {
+                                            // Use external error
+                                            return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+                                        }
+#  endif
+                                    }
+                                    else
+                                    {
+                                        return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+                                    }
+# else
                                     return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+# endif
                                 }
 #endif
                             }
@@ -614,7 +718,33 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 #ifdef UWVM_CPP_EXCEPTIONS
                                     catch(::fast_io::error e)
                                     {
+# if defined(_WIN32) && defined(_WIN32_WINDOWS)
+                                        // Windows 9x distinguishes between directory and file operations while attempting directory operations.
+                                        if(e.code == 5uz /*ERROR_ACCESS_DENIED*/)
+                                        {
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                            try
+#  endif
+                                            {
+                                                // default is nofollow
+                                                ::fast_io::dir_file tmp_dir_file{at(path_stack.back_unchecked()), open_file_name};
+                                                open_file_status = ::fast_io::status(tmp_dir_file);
+                                            }
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                            catch(::fast_io::error)
+                                            {
+                                                // Use external error
+                                                return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+                                            }
+#  endif
+                                        }
+                                        else
+                                        {
+                                            return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+                                        }
+# else
                                         return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+# endif
                                     }
 #endif
                                 }
@@ -647,7 +777,33 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 #ifdef UWVM_CPP_EXCEPTIONS
                                         catch(::fast_io::error e)
                                         {
+# if defined(_WIN32) && defined(_WIN32_WINDOWS)
+                                            // Windows 9x distinguishes between directory and file operations while attempting directory operations.
+                                            if(e.code == 5uz /*ERROR_ACCESS_DENIED*/)
+                                            {
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                                try
+#  endif
+                                                {
+                                                    // default is nofollow
+                                                    ::fast_io::dir_file tmp_dir_file{at(curr_fd_native_file), open_file_name};
+                                                    open_file_status = ::fast_io::status(tmp_dir_file);
+                                                }
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                                catch(::fast_io::error)
+                                                {
+                                                    // Use external error
+                                                    return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+                                                }
+#  endif
+                                            }
+                                            else
+                                            {
+                                                return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+                                            }
+# else
                                             return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+# endif
                                         }
 #endif
                                     }
@@ -664,7 +820,33 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 #ifdef UWVM_CPP_EXCEPTIONS
                                         catch(::fast_io::error e)
                                         {
+# if defined(_WIN32) && defined(_WIN32_WINDOWS)
+                                            // Windows 9x distinguishes between directory and file operations while attempting directory operations.
+                                            if(e.code == 5uz /*ERROR_ACCESS_DENIED*/)
+                                            {
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                                try
+#  endif
+                                                {
+                                                    // default is nofollow
+                                                    ::fast_io::dir_file tmp_dir_file{at(path_stack.back_unchecked()), open_file_name};
+                                                    open_file_status = ::fast_io::status(tmp_dir_file);
+                                                }
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                                catch(::fast_io::error)
+                                                {
+                                                    // Use external error
+                                                    return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+                                                }
+#  endif
+                                            }
+                                            else
+                                            {
+                                                return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+                                            }
+# else
                                             return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+# endif
                                         }
 #endif
                                     }
@@ -689,7 +871,33 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 #ifdef UWVM_CPP_EXCEPTIONS
                                 catch(::fast_io::error e)
                                 {
+# if defined(_WIN32) && defined(_WIN32_WINDOWS)
+                                    // Windows 9x distinguishes between directory and file operations while attempting directory operations.
+                                    if(e.code == 5uz /*ERROR_ACCESS_DENIED*/)
+                                    {
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                        try
+#  endif
+                                        {
+                                            // default is nofollow
+                                            ::fast_io::dir_file tmp_dir_file{at(path_stack.back_unchecked()), open_file_name};
+                                            open_file_status = ::fast_io::status(tmp_dir_file);
+                                        }
+#  ifdef UWVM_CPP_EXCEPTIONS
+                                        catch(::fast_io::error)
+                                        {
+                                            // Use external error
+                                            return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+                                        }
+#  endif
+                                    }
+                                    else
+                                    {
+                                        return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+                                    }
+# else
                                     return ::uwvm2::imported::wasi::wasip1::func::path_errno_from_fast_io_error(e);
+# endif
                                 }
 #endif
                             }
