@@ -735,10 +735,12 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
         }
 #endif
 
-        auto const split_path_res_last_ptr{split_path_res.res.end() - 1u};
+        auto const split_path_res_last_ptr{split_path_res.res.cend() - 1u};
 
-        for(auto const& split_curr: split_path_res.res)
+        for(auto& split_curr: split_path_res.res)
         {
+            // split_curr cannot be const because it will be moved later.
+
             if(::std::addressof(split_curr) == split_path_res_last_ptr)
             {
                 // The last one that isn't a symbolic link is a file.
