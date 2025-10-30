@@ -607,7 +607,7 @@ int main()
         }
     }
 
-#if !(defined(_WIN32_WINDOWS) || _WIN32_WINNT <= 0x600 || defined(__MSDOS__) || defined(__DJGPP__))
+#if !(defined(_WIN32_WINDOWS) || (defined(_WIN32_WINNT) && _WIN32_WINNT <= 0x600) || defined(__MSDOS__) || defined(__DJGPP__))
     // Case 14: symlink intermediate -> create under target directory
     {
         try
@@ -678,7 +678,7 @@ int main()
     }
 #endif
 
-#if !(defined(_WIN32_WINDOWS) || _WIN32_WINNT <= 0x600 || defined(__MSDOS__) || defined(__DJGPP__))
+#if !(defined(_WIN32_WINDOWS) || (defined(_WIN32_WINNT) && _WIN32_WINNT <= 0x600) || defined(__MSDOS__) || defined(__DJGPP__))
     // Case 15: symlink loop -> eloop
     {
         try
@@ -716,7 +716,7 @@ int main()
     }
 #endif
 
-#if !(defined(_WIN32_WINDOWS) || _WIN32_WINNT <= 0x600 || defined(__MSDOS__) || defined(__DJGPP__))
+#if !(defined(_WIN32_WINDOWS) || (defined(_WIN32_WINNT) && _WIN32_WINNT <= 0x600) || defined(__MSDOS__) || defined(__DJGPP__))
     // Case 16: symlink escapes root -> eperm
     {
         try
@@ -804,7 +804,7 @@ int main()
         }
     }
 
-#if !(defined(_WIN32_WINDOWS) || _WIN32_WINNT <= 0x600 || defined(__MSDOS__) || defined(__DJGPP__))
+#if !(defined(_WIN32_WINDOWS) || (defined(_WIN32_WINNT) && _WIN32_WINNT <= 0x600) || defined(__MSDOS__) || defined(__DJGPP__))
     // Case 18: symlink to absolute path (e.g., /etc) -> eperm
     {
         try
@@ -842,7 +842,7 @@ int main()
     }
 #endif
 
-#if !(defined(_WIN32_WINDOWS) || _WIN32_WINNT <= 0x600 || defined(__MSDOS__) || defined(__DJGPP__))
+#if !(defined(_WIN32_WINDOWS) || (defined(_WIN32_WINNT) && _WIN32_WINNT <= 0x600) || defined(__MSDOS__) || defined(__DJGPP__))
     // Case 19: two-node symlink loop A<->B -> eloop
     {
         try
@@ -888,7 +888,7 @@ int main()
     }
 #endif
 
-#if !(defined(_WIN32_WINDOWS) || _WIN32_WINNT <= 0x600 || defined(__MSDOS__) || defined(__DJGPP__))
+#if !(defined(_WIN32_WINDOWS) || (defined(_WIN32_WINNT) && _WIN32_WINNT <= 0x600) || defined(__MSDOS__) || defined(__DJGPP__))
     // Case 20: symlink to ".." inside subdir -> esuccess (pcd64_escape_a/up/x -> x)
     {
         try
@@ -1020,7 +1020,7 @@ int main()
     }
 #endif
 
-#if !(defined(_WIN32_WINDOWS) || _WIN32_WINNT <= 0x600 || defined(__MSDOS__) || defined(__DJGPP__))
+#if !(defined(_WIN32_WINDOWS) || (defined(_WIN32_WINNT) && _WIN32_WINNT <= 0x600) || defined(__MSDOS__) || defined(__DJGPP__))
     // Case 22: symlink to a file as intermediate -> enotdir
     {
         try

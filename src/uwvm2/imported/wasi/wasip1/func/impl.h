@@ -77,5 +77,7 @@
 # include "fd_write.h"
 # include "path_create_directory_wasm64.h"
 # include "path_create_directory.h"
+# include "path_filestat_get_wasm64.h"
+# include "path_filestat_get.h"
 
 #endif
