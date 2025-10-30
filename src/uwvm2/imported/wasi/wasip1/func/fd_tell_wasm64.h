@@ -110,7 +110,12 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                 u8"(wasi-trace)\n",
                                 ::fast_io::mnp::cond(::uwvm2::uwvm::utils::ansies::put_color, UWVM_COLOR_U8_RST_ALL));
 #else
-            ::fast_io::io::perr(::fast_io::u8err(), u8"uwvm: [info]  wasip1: fd_tell_wasm64(", fd, u8", ", ::fast_io::mnp::addrvw(tell_ptrsz), u8") (wasi-trace)\n");
+            ::fast_io::io::perr(::fast_io::u8err(),
+                                u8"uwvm: [info]  wasip1: fd_tell_wasm64(",
+                                fd,
+                                u8", ",
+                                ::fast_io::mnp::addrvw(tell_ptrsz),
+                                u8") (wasi-trace)\n");
 #endif
         }
 
@@ -153,10 +158,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
             }
 
 #if (defined(_DEBUG) || defined(DEBUG)) && defined(UWVM_ENABLE_DETAILED_DEBUG_CHECK)
-            if(curr_wasi_fd_t_p == nullptr) [[unlikely]]
-            {
-                ::uwvm2::utils::debug::trap_and_inform_bug_pos();
-            }
+            if(curr_wasi_fd_t_p == nullptr) [[unlikely]] { ::uwvm2::utils::debug::trap_and_inform_bug_pos(); }
 #endif
 
             curr_fd_release_guard.device_p = ::std::addressof(curr_wasi_fd_t_p->fd_mutex);
@@ -309,7 +311,10 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
                                 default: return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
                             }
 
-                            if(ffdt.DeviceType == 0x00000011u /*FILE_DEVICE_NAMED_PIPE*/) { return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::espipe; }
+                            if(ffdt.DeviceType == 0x00000011u /*FILE_DEVICE_NAMED_PIPE*/)
+                            {
+                                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::espipe;
+                            }
 
                             return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::einval;
                         }
@@ -411,7 +416,10 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 
         if constexpr(::std::numeric_limits<::fast_io::intfpos_t>::max() > ::std::numeric_limits<underlying_new_offset_type_t>::max())
         {
-            if(tell_fpos > ::std::numeric_limits<underlying_new_offset_type_t>::max()) { return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eoverflow; }
+            if(tell_fpos > ::std::numeric_limits<underlying_new_offset_type_t>::max())
+            {
+                return ::uwvm2::imported::wasi::wasip1::abi::errno_wasm64_t::eoverflow;
+            }
         }
 
         ::uwvm2::imported::wasi::wasip1::memory::store_basic_wasm_type_to_memory_wasm64(memory,
@@ -427,5 +435,4 @@ UWVM_MODULE_EXPORT namespace uwvm2::imported::wasi::wasip1::func
 # include <uwvm2/utils/macro/pop_macros.h>
 # include <uwvm2/uwvm_predefine/utils/ansies/uwvm_color_pop_macro.h>
 #endif
-
 

@@ -34,9 +34,9 @@
 # include <TargetConditionals.h>
 # include <Availability.h>
 #endif
-# if (defined(__MIPS__) || defined(__mips__) || defined(_MIPS_ARCH))
-#  include <sgidefs.h>
-# endif
+#if (defined(__MIPS__) || defined(__mips__) || defined(_MIPS_ARCH))
+# include <sgidefs.h>
+#endif
 // std
 #ifndef UWVM_MODULE
 # include <fast_io.h>
