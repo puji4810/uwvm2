@@ -43,6 +43,8 @@ UWVM_MODULE_EXPORT namespace uwvm2::utils::intrinsics::arm_sve
 
     using svbool_t = __SVBool_t;
     using svuint8_t = __SVUint8_t;
+    using svuint16_t = __SVUint16_t;
+    using svuint32_t = __SVUint32_t;
     using svuint64_t = __SVUint64_t;
 
     [[clang::__clang_arm_builtin_alias(__builtin_sve_svptrue_b8)]]

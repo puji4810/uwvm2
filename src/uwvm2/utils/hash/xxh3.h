@@ -480,9 +480,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::utils::hash
         }
 
         inline constexpr ::std::uint_least64_t xxh3_mix2_accs(::std::uint_least64_t const* __restrict acc, ::std::byte const* __restrict secret) noexcept
-        {
-            return xxh3_mul128_fold64(acc[0u] ^ xxh_readLE64(secret), acc[1u] ^ xxh_readLE64(secret + 8u));
-        }
+        { return xxh3_mul128_fold64(acc[0u] ^ xxh_readLE64(secret), acc[1u] ^ xxh_readLE64(secret + 8u)); }
 
         inline constexpr ::std::uint_least64_t
             xxh3_merge_accs(::std::uint_least64_t const* __restrict acc, ::std::byte const* __restrict secret, ::std::uint_least64_t start) noexcept
@@ -925,7 +923,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::utils::hash
                                                                                 1u)};
             ::std::uint64_t element_count{::uwvm2::utils::intrinsics::arm_sve::svcntd()};
 
-            using u8x16simd_may_alias_ptr UWVM_GNU_MAY_ALIAS = u8x16simd*;
+            using uint64_t_const_may_alias_ptr UWVM_GNU_MAY_ALIAS = ::std::uint64_t const*;
 
             if(element_count >= 8u)
             {
@@ -935,10 +933,10 @@ UWVM_MODULE_EXPORT namespace uwvm2::utils::hash
                             {
                                 auto const input_vec{::uwvm2::utils::intrinsics::arm_sve::svld1_u64(
                                     mask,
-                                    reinterpret_cast<u8x16simd_may_alias_ptr>(input + offset * sizeof(::std::uint64_t)))};
+                                    reinterpret_cast<uint64_t_const_may_alias_ptr>(input + offset * sizeof(::std::uint64_t)))};
                                 auto const secret_vec{::uwvm2::utils::intrinsics::arm_sve::svld1_u64(
                                     mask,
-                                    reinterpret_cast<u8x16simd_may_alias_ptr>(secret + offset * sizeof(::std::uint64_t)))};
+                                    reinterpret_cast<uint64_t_const_may_alias_ptr>(secret + offset * sizeof(::std::uint64_t)))};
                                 auto const mixed{::uwvm2::utils::intrinsics::arm_sve::sveor_u64_x(mask, secret_vec, input_vec)};
                                 auto const swapped{::uwvm2::utils::intrinsics::arm_sve::svtbl_u64(input_vec, kSwap)};
                                 auto const mixed_lo{::uwvm2::utils::intrinsics::arm_sve::svextw_u64_x(mask, mixed)};
@@ -961,10 +959,10 @@ UWVM_MODULE_EXPORT namespace uwvm2::utils::hash
                             {
                                 auto const input_vec{::uwvm2::utils::intrinsics::arm_sve::svld1_u64(
                                     mask,
-                                    reinterpret_cast<u8x16simd_may_alias_ptr>(input + offset * sizeof(::std::uint64_t)))};
+                                    reinterpret_cast<uint64_t_const_may_alias_ptr>(input + offset * sizeof(::std::uint64_t)))};
                                 auto const secret_vec{::uwvm2::utils::intrinsics::arm_sve::svld1_u64(
                                     mask,
-                                    reinterpret_cast<u8x16simd_may_alias_ptr>(secret + offset * sizeof(::std::uint64_t)))};
+                                    reinterpret_cast<uint64_t_const_may_alias_ptr>(secret + offset * sizeof(::std::uint64_t)))};
                                 auto const mixed{::uwvm2::utils::intrinsics::arm_sve::sveor_u64_x(mask, secret_vec, input_vec)};
                                 auto const swapped{::uwvm2::utils::intrinsics::arm_sve::svtbl_u64(input_vec, kSwap)};
                                 auto const mixed_lo{::uwvm2::utils::intrinsics::arm_sve::svextw_u64_x(mask, mixed)};
@@ -990,10 +988,10 @@ UWVM_MODULE_EXPORT namespace uwvm2::utils::hash
                             {
                                 auto const input_vec{::uwvm2::utils::intrinsics::arm_sve::svld1_u64(
                                     mask,
-                                    reinterpret_cast<u8x16simd_may_alias_ptr>(input + offset * sizeof(::std::uint64_t)))};
+                                    reinterpret_cast<uint64_t_const_may_alias_ptr>(input + offset * sizeof(::std::uint64_t)))};
                                 auto const secret_vec{::uwvm2::utils::intrinsics::arm_sve::svld1_u64(
                                     mask,
-                                    reinterpret_cast<u8x16simd_may_alias_ptr>(secret + offset * sizeof(::std::uint64_t)))};
+                                    reinterpret_cast<uint64_t_const_may_alias_ptr>(secret + offset * sizeof(::std::uint64_t)))};
                                 auto const mixed{::uwvm2::utils::intrinsics::arm_sve::sveor_u64_x(mask, secret_vec, input_vec)};
                                 auto const swapped{::uwvm2::utils::intrinsics::arm_sve::svtbl_u64(input_vec, kSwap)};
                                 auto const mixed_lo{::uwvm2::utils::intrinsics::arm_sve::svextw_u64_x(mask, mixed)};
@@ -2167,9 +2165,7 @@ UWVM_MODULE_EXPORT namespace uwvm2::utils::hash
     }  // namespace details
 
     inline constexpr ::std::uint_least64_t xxh3_64bits(::std::byte const* __restrict input, ::std::size_t len, ::std::uint_least64_t seed64 = 0u) noexcept
-    {
-        return details::xxh3_64bits_internal(input, len, seed64, details::xxh3_kSecret, sizeof(details::xxh3_kSecret));
-    }
+    { return details::xxh3_64bits_internal(input, len, seed64, details::xxh3_kSecret, sizeof(details::xxh3_kSecret)); }
 
     /// @brief xxh3 context class for incremental hashing
     struct xxh3_64bits_context
