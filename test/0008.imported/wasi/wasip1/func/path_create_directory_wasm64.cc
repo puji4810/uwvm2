@@ -57,7 +57,7 @@ int main()
                                                                                              static_cast<wasi_size_wasm64_t>(0u));
         if(ret != errno_wasm64_t::ebadf)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 0 expected ebadf");
+            ::fast_io::io::perrln("error: pcd64 Case 0 expected ebadf. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -100,7 +100,7 @@ int main()
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"uwvm_ut_pcd64_no_rights") - 1u));
         if(ret != errno_wasm64_t::enotcapable)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 1 expected enotcapable");
+            ::fast_io::io::perrln("error: pcd64 Case 1 expected enotcapable. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -125,7 +125,7 @@ int main()
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"uwvm_ut_pcd64_notdir") - 1u));
         if(ret != errno_wasm64_t::enotdir)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 2 expected enotdir");
+            ::fast_io::io::perrln("error: pcd64 Case 2 expected enotdir. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -155,7 +155,7 @@ int main()
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"/abs64_dir") - 1u));
         if(ret != errno_wasm64_t::eperm)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 3 expected eperm");
+            ::fast_io::io::perrln("error: pcd64 Case 3 expected eperm. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -185,7 +185,7 @@ int main()
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8".") - 1u));
         if(ret != errno_wasm64_t::eexist)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 4 expected eexist");
+            ::fast_io::io::perrln("error: pcd64 Case 4 expected eexist. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -209,7 +209,7 @@ int main()
                                                                                              static_cast<wasi_size_wasm64_t>(0u));
         if(ret != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 5 expected einval");
+            ::fast_io::io::perrln("error: pcd64 Case 5 expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -239,7 +239,7 @@ int main()
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"uwvm_ut_pcd64_ok") - 1u));
         if(ret != errno_wasm64_t::esuccess)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 6 expected esuccess");
+            ::fast_io::io::perrln("error: pcd64 Case 6 expected esuccess. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -283,7 +283,7 @@ int main()
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_dot_a/b/.") - 1u));
         if(ret != errno_wasm64_t::eexist)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 7 expected eexist");
+            ::fast_io::io::perrln("error: pcd64 Case 7 expected eexist. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -327,7 +327,7 @@ int main()
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_dot2_a/x/.") - 1u));
         if(ret != errno_wasm64_t::enoent)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 8 expected enoent");
+            ::fast_io::io::perrln("error: pcd64 Case 8 expected enoent. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -367,7 +367,7 @@ int main()
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_dot3_a/f/.") - 1u));
         if(ret != errno_wasm64_t::enotdir)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 9 expected enotdir");
+            ::fast_io::io::perrln("error: pcd64 Case 9 expected enotdir. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -418,7 +418,7 @@ int main()
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_pp_a/b/../c") - 1u));
         if(ret != errno_wasm64_t::esuccess)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 10 expected esuccess");
+            ::fast_io::io::perrln("error: pcd64 Case 10 expected esuccess. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -481,7 +481,7 @@ int main()
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_pp2_a/b/../c") - 1u));
         if(ret != errno_wasm64_t::enoent)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 11 expected enoent");
+            ::fast_io::io::perrln("error: pcd64 Case 11 expected enoent. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -521,7 +521,7 @@ int main()
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_pp3_a/b/../c") - 1u));
         if(ret != errno_wasm64_t::enotdir)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 12 expected enotdir");
+            ::fast_io::io::perrln("error: pcd64 Case 12 expected enotdir. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -579,7 +579,7 @@ int main()
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_pp4_a/b/../c") - 1u));
         if(ret != errno_wasm64_t::eexist)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 13 expected eexist");
+            ::fast_io::io::perrln("error: pcd64 Case 13 expected eexist. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -639,7 +639,7 @@ int main()
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_link_to_a/c") - 1u));
         if(ret != errno_wasm64_t::esuccess)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 14 expected esuccess");
+            ::fast_io::io::perrln("error: pcd64 Case 14 expected esuccess. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -702,7 +702,7 @@ int main()
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_loop/x") - 1u));
         if(ret != errno_wasm64_t::eloop)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 15 expected eloop");
+            ::fast_io::io::perrln("error: pcd64 Case 15 expected eloop. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -740,7 +740,7 @@ int main()
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_up/x") - 1u));
         if(ret != errno_wasm64_t::eperm)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 16 expected eperm");
+            ::fast_io::io::perrln("error: pcd64 Case 16 expected eperm. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -784,7 +784,7 @@ int main()
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_ex_a/b") - 1u));
         if(ret != errno_wasm64_t::eexist)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 17 expected eexist");
+            ::fast_io::io::perrln("error: pcd64 Case 17 expected eexist. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -828,7 +828,7 @@ int main()
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_abs/hack") - 1u));
         if(ret != errno_wasm64_t::eperm)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 18 expected eperm");
+            ::fast_io::io::perrln("error: pcd64 Case 18 expected eperm. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -867,7 +867,7 @@ int main()
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_loop2_a/x") - 1u));
         if(ret != errno_wasm64_t::eloop)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 19 expected eloop");
+            ::fast_io::io::perrln("error: pcd64 Case 19 expected eloop. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -927,7 +927,7 @@ int main()
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_escape_a/up/x") - 1u));
         if(ret != errno_wasm64_t::esuccess)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 20 expected esuccess");
+            ::fast_io::io::perrln("error: pcd64 Case 20 expected esuccess. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -998,7 +998,7 @@ int main()
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_ro_a/no") - 1u));
         if(!(ret == errno_wasm64_t::eacces || ret == errno_wasm64_t::eperm))
         {
-            ::fast_io::io::perrln("error: pcd64 Case 21 expected eacces/eperm");
+            ::fast_io::io::perrln("error: pcd64 Case 21 expected eacces/eperm. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -1052,7 +1052,7 @@ int main()
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_link_to_file/x") - 1u));
         if(ret != errno_wasm64_t::enotdir)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 22 expected enotdir");
+            ::fast_io::io::perrln("error: pcd64 Case 22 expected enotdir. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -1091,7 +1091,7 @@ int main()
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_inv_bs_a\\b") - 1u));
         if(ret != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 23 expected einval");
+            ::fast_io::io::perrln("error: pcd64 Case 23 expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -1111,7 +1111,7 @@ int main()
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"\\") - 1u));
         if(ret != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 23b expected einval");
+            ::fast_io::io::perrln("error: pcd64 Case 23b expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -1131,7 +1131,7 @@ int main()
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_star_*") - 1u));
         if(ret != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 24 expected einval");
+            ::fast_io::io::perrln("error: pcd64 Case 24 expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -1151,7 +1151,7 @@ int main()
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_qmark_?") - 1u));
         if(ret != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 25 expected einval");
+            ::fast_io::io::perrln("error: pcd64 Case 25 expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -1171,7 +1171,7 @@ int main()
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_pipe_|") - 1u));
         if(ret != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 26 expected einval");
+            ::fast_io::io::perrln("error: pcd64 Case 26 expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -1190,7 +1190,7 @@ int main()
                                                                                             static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_lt_<") - 1u));
         if(r1 != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 27a expected einval");
+            ::fast_io::io::perrln("error: pcd64 Case 27a expected einval. ", static_cast<unsigned>(r1));
             ::fast_io::fast_terminate();
         }
 
@@ -1206,7 +1206,7 @@ int main()
                                                                                             static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_gt_>") - 1u));
         if(r2 != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 27b expected einval");
+            ::fast_io::io::perrln("error: pcd64 Case 27b expected einval. ", static_cast<unsigned>(r2));
             ::fast_io::fast_terminate();
         }
     }
@@ -1226,7 +1226,7 @@ int main()
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_quote_\"") - 1u));
         if(ret != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 28 expected einval");
+            ::fast_io::io::perrln("error: pcd64 Case 28 expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -1246,7 +1246,7 @@ int main()
                                                                                              static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_colon_a:b") - 1u));
         if(ret != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 29 expected einval");
+            ::fast_io::io::perrln("error: pcd64 Case 29 expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -1267,7 +1267,7 @@ int main()
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"C:pcd64_drive_rel") - 1u));
         if(ret != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 30 expected einval");
+            ::fast_io::io::perrln("error: pcd64 Case 30 expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -1288,7 +1288,7 @@ int main()
                                                                                 static_cast<wasi_size_wasm64_t>(sizeof(u8"pcd64_inv_bs_a\\b") - 1u));
         if(ret != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd64 Case 31 expected einval");
+            ::fast_io::io::perrln("error: pcd64 Case 31 expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }

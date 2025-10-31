@@ -57,7 +57,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(0u));
         if(ret != errno_t::ebadf)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 0 expected ebadf");
+            ::fast_io::io::perrln("error: pcd32 Case 0 expected ebadf. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -99,7 +99,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"uwvm_ut_pcd32_no_rights") - 1u));
         if(ret != errno_t::enotcapable)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 1 expected enotcapable");
+            ::fast_io::io::perrln("error: pcd32 Case 1 expected enotcapable. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -123,7 +123,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"uwvm_ut_pcd32_notdir") - 1u));
         if(ret != errno_t::enotdir)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 2 expected enotdir");
+            ::fast_io::io::perrln("error: pcd32 Case 2 expected enotdir. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -153,7 +153,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"/abs32_dir") - 1u));
         if(ret != errno_t::eperm)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 3 expected eperm");
+            ::fast_io::io::perrln("error: pcd32 Case 3 expected eperm. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -181,7 +181,7 @@ int main()
             ::uwvm2::imported::wasi::wasip1::func::path_create_directory(env, static_cast<wasi_posix_fd_t>(7), p, static_cast<wasi_size_t>(sizeof(u8".") - 1u));
         if(ret != errno_t::eexist)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 4 expected eexist");
+            ::fast_io::io::perrln("error: pcd32 Case 4 expected eexist. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -202,7 +202,7 @@ int main()
         auto const ret = ::uwvm2::imported::wasi::wasip1::func::path_create_directory(env, static_cast<wasi_posix_fd_t>(8), p, static_cast<wasi_size_t>(0u));
         if(ret != errno_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 5 expected einval");
+            ::fast_io::io::perrln("error: pcd32 Case 5 expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -231,7 +231,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"uwvm_ut_pcd32_ok") - 1u));
         if(ret != errno_t::esuccess)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 6 expected esuccess");
+            ::fast_io::io::perrln("error: pcd32 Case 6 expected esuccess. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -275,7 +275,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_dot_a/b/.") - 1u));
         if(ret != errno_t::eexist)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 7 expected eexist");
+            ::fast_io::io::perrln("error: pcd32 Case 7 expected eexist. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -318,7 +318,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_dot2_a/x/.") - 1u));
         if(ret != errno_t::enoent)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 8 expected enoent");
+            ::fast_io::io::perrln("error: pcd32 Case 8 expected enoent. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -357,7 +357,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_dot3_a/f/.") - 1u));
         if(ret != errno_t::enotdir)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 9 expected enotdir");
+            ::fast_io::io::perrln("error: pcd32 Case 9 expected enotdir. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -407,7 +407,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_pp_a/b/../c") - 1u));
         if(ret != errno_t::esuccess)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 10 expected esuccess");
+            ::fast_io::io::perrln("error: pcd32 Case 10 expected esuccess. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -469,7 +469,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_pp2_a/b/../c") - 1u));
         if(ret != errno_t::enoent)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 11 expected enoent");
+            ::fast_io::io::perrln("error: pcd32 Case 11 expected enoent. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -508,7 +508,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_pp3_a/b/../c") - 1u));
         if(ret != errno_t::enotdir)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 12 expected enotdir");
+            ::fast_io::io::perrln("error: pcd32 Case 12 expected enotdir. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -565,7 +565,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_pp4_a/b/../c") - 1u));
         if(ret != errno_t::eexist)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 13 expected eexist");
+            ::fast_io::io::perrln("error: pcd32 Case 13 expected eexist. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -624,7 +624,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_link_to_a/c") - 1u));
         if(ret != errno_t::esuccess)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 14 expected esuccess");
+            ::fast_io::io::perrln("error: pcd32 Case 14 expected esuccess. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -687,7 +687,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_loop/x") - 1u));
         if(ret != errno_t::eloop)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 15 expected eloop");
+            ::fast_io::io::perrln("error: pcd32 Case 15 expected eloop. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -725,7 +725,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_up/x") - 1u));
         if(ret != errno_t::eperm)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 16 expected eperm");
+            ::fast_io::io::perrln("error: pcd32 Case 16 expected eperm. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -769,7 +769,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_ex_a/b") - 1u));
         if(ret != errno_t::eexist)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 17 expected eexist");
+            ::fast_io::io::perrln("error: pcd32 Case 17 expected eexist. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -813,7 +813,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_abs/hack") - 1u));
         if(ret != errno_t::eperm)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 18 expected eperm");
+            ::fast_io::io::perrln("error: pcd32 Case 18 expected eperm. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -852,7 +852,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_loop2_a/x") - 1u));
         if(ret != errno_t::eloop)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 19 expected eloop");
+            ::fast_io::io::perrln("error: pcd32 Case 19 expected eloop. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -911,7 +911,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_escape_a/up/x") - 1u));
         if(ret != errno_t::esuccess)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 20 expected esuccess");
+            ::fast_io::io::perrln("error: pcd32 Case 20 expected esuccess. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -983,7 +983,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_ro_a/no") - 1u));
         if(!(ret == errno_t::eacces || ret == errno_t::eperm))
         {
-            ::fast_io::io::perrln("error: pcd32 Case 21 expected eacces/eperm");
+            ::fast_io::io::perrln("error: pcd32 Case 21 expected eacces/eperm. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -1035,7 +1035,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_link_to_file/x") - 1u));
         if(ret != errno_t::enotdir)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 22 expected enotdir");
+            ::fast_io::io::perrln("error: pcd32 Case 22 expected enotdir. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
 
@@ -1073,7 +1073,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_inv_bs_a\\b") - 1u));
         if(ret != errno_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 23 expected einval");
+            ::fast_io::io::perrln("error: pcd32 Case 23 expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -1093,7 +1093,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"\\") - 1u));
         if(ret != errno_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 23b expected einval");
+            ::fast_io::io::perrln("error: pcd32 Case 23b expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -1113,7 +1113,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_star_*") - 1u));
         if(ret != errno_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 24 expected einval");
+            ::fast_io::io::perrln("error: pcd32 Case 24 expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -1133,7 +1133,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_qmark_?") - 1u));
         if(ret != errno_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 25 expected einval");
+            ::fast_io::io::perrln("error: pcd32 Case 25 expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -1153,7 +1153,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_pipe_|") - 1u));
         if(ret != errno_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 26 expected einval");
+            ::fast_io::io::perrln("error: pcd32 Case 26 expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -1172,7 +1172,7 @@ int main()
                                                                                      static_cast<wasi_size_t>(sizeof(u8"pcd32_lt_<") - 1u));
         if(r1 != errno_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 27a expected einval");
+            ::fast_io::io::perrln("error: pcd32 Case 27a expected einval. ", static_cast<unsigned>(r1));
             ::fast_io::fast_terminate();
         }
 
@@ -1188,7 +1188,7 @@ int main()
                                                                                      static_cast<wasi_size_t>(sizeof(u8"pcd32_gt_>") - 1u));
         if(r2 != errno_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 27b expected einval");
+            ::fast_io::io::perrln("error: pcd32 Case 27b expected einval. ", static_cast<unsigned>(r2));
             ::fast_io::fast_terminate();
         }
     }
@@ -1208,7 +1208,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_quote_\"") - 1u));
         if(ret != errno_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 28 expected einval");
+            ::fast_io::io::perrln("error: pcd32 Case 28 expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -1228,7 +1228,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"pcd32_colon_a:b") - 1u));
         if(ret != errno_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 29 expected einval");
+            ::fast_io::io::perrln("error: pcd32 Case 29 expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -1248,7 +1248,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"C:pcd32_drive_rel") - 1u));
         if(ret != errno_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 30 expected einval");
+            ::fast_io::io::perrln("error: pcd32 Case 30 expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -1268,7 +1268,7 @@ int main()
                                                                                       static_cast<wasi_size_t>(sizeof(u8"C:pcd64_drive_rel") - 1u));
         if(ret != errno_t::einval)
         {
-            ::fast_io::io::perrln("error: pcd32 Case 31 expected einval");
+            ::fast_io::io::perrln("error: pcd32 Case 31 expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }

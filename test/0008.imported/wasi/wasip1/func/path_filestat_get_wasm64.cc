@@ -98,7 +98,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::ebadf)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 0 expected ebadf");
+            ::fast_io::io::perrln("error: pfg64 Case 0 expected ebadf. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -127,7 +127,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::enotcapable)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 1 expected enotcapable");
+            ::fast_io::io::perrln("error: pfg64 Case 1 expected enotcapable. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -150,7 +150,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::enotdir)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 2 expected enotdir");
+            ::fast_io::io::perrln("error: pfg64 Case 2 expected enotdir. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -168,7 +168,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::eperm)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 3 expected eperm");
+            ::fast_io::io::perrln("error: pfg64 Case 3 expected eperm. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -184,7 +184,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 4 expected einval");
+            ::fast_io::io::perrln("error: pfg64 Case 4 expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -202,7 +202,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::esuccess || read_filetype(memory, stat_ptr) != ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_directory)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 5 expected esuccess + directory");
+            ::fast_io::io::perrln("error: pfg64 Case 5 expected esuccess + directory. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -236,7 +236,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::esuccess || read_filetype(memory, stat_ptr) != ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_regular_file)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 6 expected esuccess + regular_file");
+            ::fast_io::io::perrln("error: pfg64 Case 6 expected esuccess + regular_file. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -254,7 +254,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::esuccess || read_filetype(memory, stat_ptr) != ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_directory)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 7 expected esuccess + directory");
+            ::fast_io::io::perrln("error: pfg64 Case 7 expected esuccess + directory. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -272,7 +272,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::enoent)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 8 expected enoent");
+            ::fast_io::io::perrln("error: pfg64 Case 8 expected enoent. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -299,7 +299,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::enotdir)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 9 expected enotdir");
+            ::fast_io::io::perrln("error: pfg64 Case 9 expected enotdir. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
         try
@@ -343,7 +343,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::esuccess || read_filetype(memory, stat_ptr) != ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_symbolic_link)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 10 expected esuccess + symbolic_link");
+            ::fast_io::io::perrln("error: pfg64 Case 10 expected esuccess + symbolic_link. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
         // verify size equals link string length on POSIX platforms
@@ -352,7 +352,7 @@ int main()
             auto const sz = read_size(memory, stat_ptr);
             if(static_cast<::std::uint_least64_t>(sz) != static_cast<::std::uint_least64_t>(sizeof(u8"pfg64_tA") - 1u))
             {
-                ::fast_io::io::perrln("error: pfg64 Case 10 symlink size mismatch");
+                ::fast_io::io::perrln("error: pfg64 Case 10 symlink size mismatch. ", static_cast<unsigned>(ret));
                 ::fast_io::fast_terminate();
             }
         }
@@ -402,7 +402,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::esuccess || read_filetype(memory, stat_ptr) != ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_regular_file)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 11 expected esuccess + regular_file");
+            ::fast_io::io::perrln("error: pfg64 Case 11 expected esuccess + regular_file. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
         try
@@ -457,7 +457,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::esuccess || read_filetype(memory, stat_ptr) != ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_regular_file)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 12 expected esuccess + regular_file");
+            ::fast_io::io::perrln("error: pfg64 Case 12 expected esuccess + regular_file. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
         try
@@ -519,7 +519,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::esuccess || read_filetype(memory, stat_ptr) != ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_regular_file)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 13 expected esuccess + regular_file");
+            ::fast_io::io::perrln("error: pfg64 Case 13 expected esuccess + regular_file. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
         try
@@ -566,7 +566,7 @@ int main()
                                                                                         stat_ptr);
         if(r1 != errno_wasm64_t::eloop)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 14a expected eloop");
+            ::fast_io::io::perrln("error: pfg64 Case 14a expected eloop. ", static_cast<unsigned>(r1));
             ::fast_io::fast_terminate();
         }
 
@@ -580,7 +580,7 @@ int main()
                                                                                         stat_ptr);
         if(r2 != errno_wasm64_t::esuccess || read_filetype(memory, stat_ptr) != ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_symbolic_link)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 14b expected esuccess + symbolic_link");
+            ::fast_io::io::perrln("error: pfg64 Case 14b expected esuccess + symbolic_link. ", static_cast<unsigned>(r2));
             ::fast_io::fast_terminate();
         }
 
@@ -614,7 +614,7 @@ int main()
                                                                                        stat_ptr);
         if(r != errno_wasm64_t::eloop)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 15 expected eloop");
+            ::fast_io::io::perrln("error: pfg64 Case 15 expected eloop. ", static_cast<unsigned>(r));
             ::fast_io::fast_terminate();
         }
         try
@@ -647,7 +647,7 @@ int main()
                                                                                         stat_ptr);
         if(r1 != errno_wasm64_t::eperm)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 16a expected eperm");
+            ::fast_io::io::perrln("error: pfg64 Case 16a expected eperm. ", static_cast<unsigned>(r1));
             ::fast_io::fast_terminate();
         }
 
@@ -661,7 +661,7 @@ int main()
                                                                                         stat_ptr);
         if(r2 != errno_wasm64_t::esuccess || read_filetype(memory, stat_ptr) != ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_symbolic_link)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 16b expected esuccess + symbolic_link");
+            ::fast_io::io::perrln("error: pfg64 Case 16b expected esuccess + symbolic_link. ", static_cast<unsigned>(r2));
             ::fast_io::fast_terminate();
         }
 
@@ -691,7 +691,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pfg64 inv bs expected einval");
+            ::fast_io::io::perrln("error: pfg64 inv bs expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -708,7 +708,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pfg64 sole bs expected einval");
+            ::fast_io::io::perrln("error: pfg64 sole bs expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -725,7 +725,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pfg64 '*' expected einval");
+            ::fast_io::io::perrln("error: pfg64 '*' expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -742,7 +742,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pfg64 '?' expected einval");
+            ::fast_io::io::perrln("error: pfg64 '?' expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -759,7 +759,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pfg64 '|' expected einval");
+            ::fast_io::io::perrln("error: pfg64 '|' expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -776,7 +776,7 @@ int main()
                                                                                         stat_ptr);
         if(r1 != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pfg64 '<' expected einval");
+            ::fast_io::io::perrln("error: pfg64 '<' expected einval. ", static_cast<unsigned>(r1));
             ::fast_io::fast_terminate();
         }
 
@@ -791,7 +791,7 @@ int main()
                                                                                         stat_ptr);
         if(r2 != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pfg64 '>' expected einval");
+            ::fast_io::io::perrln("error: pfg64 '>' expected einval. ", static_cast<unsigned>(r2));
             ::fast_io::fast_terminate();
         }
     }
@@ -808,7 +808,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pfg64 '" " expected einval");
+            ::fast_io::io::perrln("error: pfg64 '" " expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -825,7 +825,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pfg64 ':' expected einval");
+            ::fast_io::io::perrln("error: pfg64 ':' expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -842,7 +842,7 @@ int main()
                                                                                          stat_ptr);
         if(ret != errno_wasm64_t::einval)
         {
-            ::fast_io::io::perrln("error: pfg64 'C:' expected einval");
+            ::fast_io::io::perrln("error: pfg64 'C:' expected einval. ", static_cast<unsigned>(ret));
             ::fast_io::fast_terminate();
         }
     }
@@ -861,7 +861,7 @@ int main()
                                                                                        stat_ptr);
         if(r != errno_wasm64_t::eperm)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 17 expected eperm");
+            ::fast_io::io::perrln("error: pfg64 Case 17 expected eperm. ", static_cast<unsigned>(r));
             ::fast_io::fast_terminate();
         }
     }
@@ -894,7 +894,7 @@ int main()
                                                                                        stat_ptr);
         if(r != errno_wasm64_t::esuccess || read_filetype(memory, stat_ptr) != ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_directory)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 18 expected esuccess + directory");
+            ::fast_io::io::perrln("error: pfg64 Case 18 expected esuccess + directory. ", static_cast<unsigned>(r));
             ::fast_io::fast_terminate();
         }
 
@@ -934,7 +934,7 @@ int main()
                                                                                        stat_ptr);
         if(r != errno_wasm64_t::esuccess || read_filetype(memory, stat_ptr) != ::uwvm2::imported::wasi::wasip1::abi::filetype_t::filetype_directory)
         {
-            ::fast_io::io::perrln("error: pfg64 Case 19 expected esuccess + directory");
+            ::fast_io::io::perrln("error: pfg64 Case 19 expected esuccess + directory. ", static_cast<unsigned>(r));
             ::fast_io::fast_terminate();
         }
         try
