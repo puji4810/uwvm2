@@ -20,11 +20,14 @@ import argparse
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
+from collections import Counter
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Optional
 
@@ -83,6 +86,101 @@ def validate_tools() -> bool:
         return False
 
     return True
+
+
+def extract_instructions(wasm_path: Path) -> list[str]:
+    """
+    Extract instruction list from a wasm file using wasm-objdump.
+
+    Args:
+        wasm_path: Path to .wasm file
+
+    Returns:
+        List of instruction names
+    """
+    try:
+        result = subprocess.run(
+            ["wasm-objdump", "-d", str(wasm_path)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        instructions = []
+        for line in result.stdout.splitlines():
+            if "|" in line:
+                parts = line.split("|")
+                if len(parts) >= 2:
+                    instr_line = parts[1].strip()
+                    if instr_line:
+                        # Extract first word (instruction name)
+                        instr = instr_line.split()[0]
+                        instructions.append(instr)
+        return instructions
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
+        logging.warning(f"Failed to extract instructions from {wasm_path}: {e}")
+        return []
+
+
+def generate_manifest(output_dir: Path, stats: ProcessStats) -> None:
+    """
+    Generate manifest.json with instruction coverage statistics.
+
+    Args:
+        output_dir: Directory containing .wasm files
+        stats: ProcessStats from the extraction process
+    """
+    wasm_files = sorted(output_dir.glob("*.wasm"))
+
+    if not wasm_files:
+        logging.warning("No .wasm files found, skipping manifest generation")
+        return
+
+    all_instructions: list[str] = []
+    file_entries: list[dict] = []
+
+    for wasm_file in wasm_files:
+        instructions = extract_instructions(wasm_file)
+        all_instructions.extend(instructions)
+
+        # Parse source from filename (pattern: <source>.<index>.wasm)
+        name_parts = wasm_file.stem.rsplit(".", 1)
+        source = (
+            f"{name_parts[0]}.wast" if len(name_parts) > 1 else f"{wasm_file.stem}.wast"
+        )
+
+        file_entries.append(
+            {
+                "name": wasm_file.name,
+                "source": source,
+                "instruction_count": len(instructions),
+            }
+        )
+
+    # Count instruction frequency
+    instr_counts = Counter(all_instructions)
+
+    manifest = {
+        "corpus": "WebAssembly MVP Specification Test Corpus",
+        "generated": date.today().isoformat(),
+        "total_modules": len(wasm_files),
+        "total_instructions": len(all_instructions),
+        "unique_instructions": len(instr_counts),
+        "instruction_coverage": dict(instr_counts),
+        "top_instructions": [
+            {"instruction": instr, "count": count}
+            for instr, count in instr_counts.most_common(20)
+        ],
+        "files": file_entries,
+    }
+
+    manifest_path = output_dir / "manifest.json"
+    with open(manifest_path, "w") as f:
+        json.dump(manifest, f, indent=2)
+
+    logging.info(f"Generated manifest: {manifest_path}")
+    logging.info(
+        f"  Modules: {len(wasm_files)}, Instructions: {len(all_instructions)}, Unique: {len(instr_counts)}"
+    )
 
 
 def read_wast_file_list(input_file: Path) -> list[Path]:
@@ -331,6 +429,10 @@ Examples:
     print(f"Malformed modules:       {stats.malformed_modules} (skipped)")
     print(f"\nExtracted .wasm files:   {stats.extracted_wasm_files}")
     print("=" * 60)
+
+    # Generate manifest.json
+    if not args.dry_run:
+        generate_manifest(args.output, stats)
 
     if args.dry_run:
         print("\n[DRY-RUN] Run without --dry-run to actually extract files")
