@@ -17,3 +17,7 @@ build
 vsxmake2022/
 vsxmake2019/
 vsxmake2017/
+# Spec corpus build artifacts (regenerate with: python3 scripts/build-spec-corpus.py)
+test/spec-corpus/**/*.wasm
+test/spec-corpus/**/*.wat
+test/spec-corpus/**/manifest.json
